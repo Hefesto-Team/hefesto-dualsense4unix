@@ -46,6 +46,7 @@ import structlog
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as ode
 from hefesto_dualsense4unix.daemon import launch_env
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -139,6 +140,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
               "install": {"executable": f"bin/h{i}.exe", "install_path": f"/x/h{i}",
                           "is_dlc": False}} for i in range(4)]
     (heroic / "legendary_library.json").write_text(json.dumps({"library": itens}))
+    plantar_o_registro(heroic.parent, [str(i["app_name"]) for i in itens])
     atalhos = raiz / ".local/share/applications"
     atalhos.mkdir(parents=True)
     for i in range(ATALHOS):

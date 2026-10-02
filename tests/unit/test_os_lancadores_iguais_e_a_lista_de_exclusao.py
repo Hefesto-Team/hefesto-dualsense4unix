@@ -54,6 +54,7 @@ from tests.unit.test_hefesto_launch_wrapper import (
     _write_env_file,
 )
 from tests.unit.test_proton_pin import PIN_NAME, _config_vdf
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 from tests.unit.test_sentinela_do_wrapper_01_a_steam_comeu_o_hefesto_launch import (
     _vdf as _localconfig,
 )
@@ -1023,6 +1024,7 @@ def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
     (casa / "store_cache" / "legendary_library.json").write_text(json.dumps(
         {"library": [{"app_name": _APP_DO_HEROIC, "title": "Guardiões", "is_installed": True,
                       "install": {"executable": "retail/gotg.exe"}}]}), encoding="utf-8")
+    plantar_o_registro(casa, [_APP_DO_HEROIC])
     prefixo = Path.home() / "Games/Heroic/Prefixes/Guardioes"
     copia = casa / "GamesConfig" / f"{_APP_DO_HEROIC}.json"
     if com_copia:

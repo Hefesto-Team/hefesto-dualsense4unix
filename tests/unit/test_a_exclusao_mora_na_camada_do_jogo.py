@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sqlite3
 import tomllib
@@ -44,6 +45,7 @@ from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import EPIC
 from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import (
     _registro as _registro_com_camadas,
 )
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -305,7 +307,9 @@ def _heroic(lar: Path, jogos: dict[str, dict[str, object]], *, rel: str =
             moradores: dict[Path, list[str]] | None = None, base: int = 100) -> Path:
     """Uma casa do Heroic com estes jogos instalados (`app -> cópia`).
 
-    O umu-id de cada jogo é `umu-<base + i>`, na ordem do dicionário.
+    O umu-id de cada jogo é `umu-<base + i>`, na ordem do dicionário. O
+    instalado é o registro da loja, que o Heroic lê (02/10/2026,
+    `plantar_o_registro`).
     """
     casa = lar / rel
     (casa / "store_cache").mkdir(parents=True)
@@ -316,6 +320,7 @@ def _heroic(lar: Path, jogos: dict[str, dict[str, object]], *, rel: str =
         {f"legendary_{app}": f"umu-{base + i}" for i, app in enumerate(jogos)}))
     (casa / "store_cache" / "legendary_library.json").write_text(json.dumps({"library": [
         {"app_name": app, "title": app, "is_installed": True} for app in jogos]}))
+    plantar_o_registro(casa, list(jogos))
     for app, copia in jogos.items():
         if copia:
             (casa / "GamesConfig" / f"{app}.json").write_text(json.dumps({app: copia}))
@@ -388,9 +393,10 @@ def _dividido_com_b_fora_do_disco(lar: Path, *, extra: tuple[str, ...] = ()) -> 
 
     O Heroic 2.22.3 (lido no `app.asar` dela) só acrescenta ao
     `installed_games`, e a cópia `GamesConfig/B.json` fica sem «remover as
-    configurações»: as duas seguem dizendo B. Quem diz que B saiu do disco é a
-    biblioteca (`is_installed` falso, e fora do `install_info`). ``extra``: mais
-    `app_name` anotados no `installed_games`, que o censo não conhece.
+    configurações»: as duas seguem dizendo B. Quem diz que B saiu do disco é o
+    registro da loja (B sai do `legendary/installed.json`, e a biblioteca o
+    marca `is_installed` falso). ``extra``: mais `app_name` anotados no
+    `installed_games`, que o censo não conhece.
     """
     dividido = _prefixo(lar / "Games/Heroic/Prefixes/Dividido")
     casa = _heroic(lar, {"A": {"winePrefix": str(dividido)},
@@ -401,6 +407,10 @@ def _dividido_com_b_fora_do_disco(lar: Path, *, extra: tuple[str, ...] = ()) -> 
     for jogo in dado["library"]:
         jogo["is_installed"] = jogo["app_name"] == "A"
     biblioteca.write_text(json.dumps(dado))
+    registro = casa / "legendaryConfig/legendary/installed.json"
+    instalados = json.loads(registro.read_text())
+    del instalados["B"]
+    registro.write_text(json.dumps(instalados))
     return dividido, casa
 
 
@@ -431,17 +441,16 @@ def test_o_morador_que_saiu_do_disco_nao_divide_o_prefixo(
 
 def test_o_desinstalado_que_volta_divide_de_novo(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """B volta ao disco (o `install_info` o diz instalado): o prefixo volta a ser
-    dividido, e B tem o device KS.
+    """B volta ao disco (o registro da loja o diz instalado, e a biblioteca
+    ainda não foi relida): o prefixo volta a ser dividido, e B tem o device KS.
 
-    MORDIDA: o «instalado» lido só do `is_installed` da biblioteca, sem a união
-    com o `install_info` que o censo faz — B segue «fora» e perde a háptica.
+    MORDIDA: o «instalado» lido só do `is_installed` da biblioteca, sem o
+    registro da loja — B segue «fora» e perde a háptica.
     """
     dividido, casa = _dividido_com_b_fora_do_disco(_lar)
     lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert lx.prefixos_excluidos() == frozenset({dividido.resolve()})
-    (casa / "store_cache" / "legendary_install_info.json").write_text(
-        json.dumps({"A": {}, "B": {}}))
+    plantar_o_registro(casa, ["B"])
     assert lx.prefixos_excluidos() == frozenset(), "B voltou ao disco e o prefixo seguiu fora"
     assert _o_ks_no(dividido, monkeypatch), "B voltou ao disco sem o device KS"
 
@@ -533,11 +542,22 @@ def _epic_ligada(raiz: Path) -> bool:
     return next(c for c in camadas if c.caminho_windows == EPIC).ligada
 
 
-def test_o_corrigir_vulkan_compara_o_prefixo_pelo_caminho(_lar: Path) -> None:
+def test_o_corrigir_vulkan_compara_o_prefixo_pelo_caminho(
+        _lar: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Dois prefixos com a mesma pasta em casas diferentes, um excluído.
+
+    As duas casas são de dois Heroic instalados (o Flatpak e o nativo): com as
+    duas no disco, o censo lê a do programa instalado (02/10/2026), e com os
+    dois instalados lê as duas.
 
     MORDIDA: a comparação pelo nome (`p.appid not in fora`, com o nome da
     pasta vindo de `ids_dos_prefixos`)."""
+    _flatpak(_lar, "com.heroicgameslauncher.hgl")
+    comandos = tmp_path / "bin"
+    comandos.mkdir()
+    (comandos / "heroic").write_text("#!/bin/sh\n")
+    (comandos / "heroic").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{comandos}{os.pathsep}{os.environ.get('PATH', '')}")
     reg = _registro_com_camadas((EPIC, "00000000"))
     um = _prefixo(_lar / "Games/Heroic/Prefixes/Dividido", reg)
     outro = _prefixo(_lar / "Outra/Prefixes/Dividido", reg)

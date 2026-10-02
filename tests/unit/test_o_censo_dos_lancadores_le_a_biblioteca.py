@@ -14,9 +14,10 @@ lançador instalado: cada caso monta no `tmp_path` a árvore exata que aquele
 lançador escreve — a de flatpak, que é a dela.
 
 **O CASO DELA ESTÁ AQUI, com os números medidos no disco em 09/09/2026:** 35
-jogos da Epic e 2 da GOG, **zero instalados**, e nenhum `install_info`. Esse
-estado parecia defeito e é leitura certa — a biblioteca lista o que a CONTA
-tem, não o que está baixado.
+jogos da Epic e 2 da GOG, **zero instalados**. Esse estado parecia defeito e é
+leitura certa — a biblioteca lista o que a CONTA tem, não o que está baixado;
+quem diz o instalado é o registro de cada loja (02/10/2026, a régua em
+`test_o_censo_responde_como_o_lancador_responde.py`).
 """
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 
 HEROIC_ID = "com.heroicgameslauncher.hgl"
 
@@ -118,8 +120,8 @@ def test_o_caso_dela_biblioteca_cheia_e_zero_instalados(
     """O disco dela em 09/09/2026: 37 na biblioteca, nenhum baixado.
 
     **Isso não é defeito, e a frase tem de dizer os DOIS números.** A
-    biblioteca lista o que a CONTA tem; o `*_install_info.json` diz o que está
-    no disco, e o dela não existe.
+    biblioteca lista o que a CONTA tem; o registro de cada loja diz o que está
+    no disco, e nenhum jogo está nele.
 
     **A MORDIDA:** faça `instalado=True` fixo e o resumo passa a prometer 37
     jogos jogáveis sobre uma pasta vazia.
@@ -131,7 +133,7 @@ def test_o_caso_dela_biblioteca_cheia_e_zero_instalados(
     _escrever(p / "store_cache/gog_library.json",
               {"games": [{"app_name": f"g{n}", "title": f"GOG {n}"}
                          for n in range(2)]})
-    # SEM `*_install_info.json` — é o disco dela
+    # SEM registro de instalados — nenhum jogo baixado
 
     b = censo.biblioteca_de("Heroic", lar=tmp_path)
 
@@ -140,19 +142,18 @@ def test_o_caso_dela_biblioteca_cheia_e_zero_instalados(
     assert b.resumo == "37 jogos na biblioteca · 0 instalados"
 
 
-def test_o_install_info_e_quem_diz_o_instalado(tmp_path: pathlib.Path) -> None:
-    """A biblioteca não sabe o que está no disco — o `install_info` sabe.
+def test_o_registro_e_quem_diz_o_instalado(tmp_path: pathlib.Path) -> None:
+    """A biblioteca não sabe o que está no disco — o registro da loja sabe.
 
     **A MORDIDA:** leia o instalado de um campo da biblioteca e este caso
-    reprova: o jogo `e1` está no `install_info` e não tem campo nenhum que o
-    diga na `library`.
+    reprova: o jogo `e1` está no `legendary/installed.json` e não tem campo
+    nenhum que o diga na `library`.
     """
     p = _flatpak(tmp_path, HEROIC_ID, "heroic")
     _escrever(p / "store_cache/legendary_library.json",
               {"library": [{"app_name": "e1", "title": "Baixado"},
                            {"app_name": "e2", "title": "Só na conta"}]})
-    _escrever(p / "store_cache/legendary_install_info.json",
-              {"e1": {"install": {"install_path": "/jogos/e1"}}})
+    plantar_o_registro(p, {"e1": {"install_path": "/jogos/e1"}})
 
     b = censo.biblioteca_de("Heroic", lar=tmp_path)
 
@@ -168,7 +169,7 @@ def test_o_singular_e_o_plural_da_frase(tmp_path: pathlib.Path) -> None:
     p = _flatpak(tmp_path, HEROIC_ID, "heroic")
     _escrever(p / "store_cache/legendary_library.json",
               {"library": [{"app_name": "e1", "title": "Um só"}]})
-    _escrever(p / "store_cache/legendary_install_info.json", {"e1": {}})
+    plantar_o_registro(p, ["e1"])
 
     assert censo.biblioteca_de("Heroic", lar=tmp_path).resumo == \
         "1 jogo na biblioteca · 1 instalado"
@@ -349,14 +350,24 @@ def test_o_lutris_e_lido_pela_regra_dele(tmp_path: pathlib.Path, casa: str) -> N
     assert b.onde == tmp_path / (config or dados)
 
 
-def test_a_caixa_do_lutris_flatpak_tem_um_dono(tmp_path: pathlib.Path) -> None:
+def test_a_caixa_do_lutris_flatpak_tem_um_dono(
+        tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Com só a `data/lutris` do Flatpak, a camada da exclusão e o censo acham
     a mesma pasta; e a cópia da regra não mora mais na carona.
+
+    A máquina não tem Lutris nenhum instalado (o `PATH` e as pastas de atalhos
+    vazios: a suíte põe um `lutris` de mentira no `PATH`), e com as duas casas
+    no disco vale a regra de sem programa instalado, o Flatpak primeiro.
 
     **A MORDIDA:** a cópia de volta no `cura_por_estrada` com só a `config/`
     (ou o censo de antes) — as duas respostas divergem.
     """
     from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    (tmp_path / "bin").mkdir()
+    monkeypatch.setenv("PATH", str(tmp_path / "bin"))
+    monkeypatch.setattr(jl, "pastas_de_atalhos", lambda: [])
 
     _banco_do_lutris(tmp_path / _CASAS_DO_LUTRIS["flatpak-so-dados"][1])
     _escrever(tmp_path / ".config/lutris/games/outro.yml", {})  # o nativo, que não conta
@@ -371,8 +382,9 @@ def test_o_lar_do_nativo_so_com_dados_acha_o_proton(tmp_path: pathlib.Path) -> N
     """Com `~/.local/share/lutris`, o lar é o `~`, e o Proton da Steam se acha
     em `~/.steam/steam/compatibilitytools.d` — o jogo vira `steam_app_<N>`.
 
-    **A MORDIDA:** o `parent.parent` de antes no `_lar_da_pasta` — o lar vira
-    `~/.local`, o Proton não se acha, e o jogo cai no «não sei».
+    **A MORDIDA:** o lar deduzido do caminho da pasta com o `parent.parent` (o
+    `_lar_da_pasta`, que saiu em 02/10/2026: o lar é o de quem chama) — o lar
+    vira `~/.local`, o Proton não se acha, e o jogo cai no «não sei».
     """
     dados = tmp_path / ".local/share/lutris"
     _banco_do_lutris(dados)

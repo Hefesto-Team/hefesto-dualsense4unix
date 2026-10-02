@@ -26,6 +26,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 
 _APP = "63a665088eb1480298f1e57943b225d8"
 _CHAVE = "steam_app_1088850"
@@ -72,6 +73,7 @@ def _heroic(*, copia: tuple[tuple[str, str], ...] | None = _COPIA_VELHA) -> Path
     (casa / "store_cache" / "legendary_library.json").write_text(json.dumps(
         {"library": [{"app_name": _APP, "title": "Guardiões", "is_installed": True,
                       "install": {"executable": "retail/gotg.exe"}}]}))
+    plantar_o_registro(casa, [_APP])
     arquivo = casa / "GamesConfig" / f"{_APP}.json"
     if copia is not None:
         arquivo.parent.mkdir(parents=True)

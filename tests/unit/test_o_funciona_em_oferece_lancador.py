@@ -55,6 +55,7 @@ from hefesto_dualsense4unix.interface.pacotes import (
     a10_perfis as a10,
 )
 from hefesto_dualsense4unix.profiles import loader
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 from hefesto_dualsense4unix.profiles import simple_match as sm
 from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.profiles.schema import (
@@ -126,6 +127,10 @@ def _heroic(lar: pathlib.Path, itens: list[dict[str, Any]]) -> None:
     cache.mkdir(parents=True, exist_ok=True)
     (cache / "legendary_library.json").write_text(
         json.dumps({"library": itens}), encoding="utf-8")
+    # O instalado é o registro da Epic, que o Heroic lê (02/10/2026).
+    plantar_o_registro(cache.parent, {
+        str(i["app_name"]): {"is_dlc": bool((i.get("install") or {}).get("is_dlc"))}
+        for i in itens if i.get("is_installed")})
     (cache / "umu.json").write_text(
         json.dumps({f"legendary_{i['app_name']}": UMU_DO_GOTG for i in itens}),
         encoding="utf-8")

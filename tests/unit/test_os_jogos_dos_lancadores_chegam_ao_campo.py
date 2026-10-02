@@ -39,6 +39,7 @@ if str(RAIZ / "src") not in sys.path:
 
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 from hefesto_dualsense4unix.integrations import jogos_locais as jl
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 
 HEROIC_ID = "com.heroicgameslauncher.hgl"
 
@@ -57,11 +58,17 @@ def _heroic(
 
     `umu=None` escreve o mapa REAL medido no disco dela; `umu={}` escreve o
     caso legítimo de um jogo que o umu não conhece.
+
+    O instalado é o registro da Epic (`legendary/installed.json`), que o Heroic
+    lê (02/10/2026): o item com `is_installed` entra nele, com o `is_dlc` dele.
     """
     pasta = lar / ".var/app" / HEROIC_ID / "config/heroic"
     alvo = pasta / "store_cache/legendary_library.json"
     alvo.parent.mkdir(parents=True, exist_ok=True)
     alvo.write_text(json.dumps({"library": itens}), encoding="utf-8")
+    plantar_o_registro(pasta, {
+        str(i["app_name"]): {"is_dlc": bool((i.get("install") or {}).get("is_dlc"))}
+        for i in itens if i.get("is_installed")})
     mapa = UMU_DO_DISCO_DELA if umu is None else umu
     (alvo.parent / "umu.json").write_text(json.dumps(mapa), encoding="utf-8")
     return pasta
@@ -146,6 +153,8 @@ def test_o_redistribuivel_da_gog_cai_pela_mesma_regua(
         {"app_name": "1421309312", "title": "Worms Revolution Gold Edition",
          "is_installed": False, "install": {"is_dlc": False}},
     ]}), encoding="utf-8")
+    # O registro da GOG dela, lido em 02/10/2026: vazio (o `gog-redist` não está nele).
+    plantar_o_registro(pasta.parent, [], loja="gog")
 
     b = censo.biblioteca_de("Heroic", lar=tmp_path)
 
@@ -192,9 +201,8 @@ def test_quem_nao_tem_chave_nao_e_oferecido_mesmo_instalado(
     """Duas ausências diferentes, e nenhuma das duas vira oferta.
 
     * *Borderlands 3* — ela tem na conta e não baixou. É o caso dos outros 28.
-    * o jogo da GOG — `is_installed: true` e **sem `executable`**. É uma forma
-      real do disco dela: o `gog_library.json` marca instalado e a GOG não
-      grava binário nenhum ali.
+    * o jogo da GOG — instalado (no registro da GOG) e **sem `executable`**,
+      nem na biblioteca nem no registro: nada ali diz o binário.
 
     É a metade honesta da §3: uma linha sem chave é uma linha que nunca
     reconhece jogo nenhum. Os dois continuam CONTANDO na biblioteca — o cartão
@@ -210,6 +218,7 @@ def test_quem_nao_tem_chave_nao_e_oferecido_mesmo_instalado(
         {"app_name": "1421309312", "title": "Worms Revolution Gold Edition",
          "is_installed": True, "install": {"is_dlc": False}}]}),
         encoding="utf-8")
+    plantar_o_registro(gog.parent, ["1421309312"], loja="gog")
 
     com_chave = censo.jogos_com_chave_de_janela(lar=tmp_path)
 

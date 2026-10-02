@@ -23,6 +23,7 @@ from __future__ import annotations
 import ast
 import inspect
 import json
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -43,6 +44,7 @@ from hefesto_dualsense4unix.integrations.identidade_de_janela import (
     classe_do_umu_id,
 )
 from hefesto_dualsense4unix.testing import FakeController
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 
 #: **UMA CHAVE DE JANELA QUALQUER, e não mais «a real» — 21/09/2026.**
 #:
@@ -557,8 +559,14 @@ def test_a_prioridade_decide_entre_o_dela_e_o_semeado(
 # A BIBLIOTECA FALSA NO DISCO — o caminho inteiro, sem um dublê
 # =============================================================================
 
-def _heroic_de_mentira(casa: Path, itens: list[dict[str, object]]) -> Path:
+def _heroic_de_mentira(casa: Path, itens: list[dict[str, object]],
+                       config: Path | None = None) -> Path:
     """O `store_cache` do Heroic de mentira — a biblioteca E o `umu.json`.
+
+    **O INSTALADO É O REGISTRO DA LOJA (02/10/2026)**, o que o Heroic lê: o item
+    com `is_installed` entra no `legendary/installed.json`
+    (`plantar_o_registro`), e é por ele que o `umu.json` se decide. ``config``
+    é o `XDG_CONFIG_HOME` do Heroic nativo; sem ele, o `<casa>/.config`.
 
     **O `umu.json` ENTROU EM 21/09/2026.** É dele que sai a chave de janela do
     jogo (`umu-1088850` -> `steam_app_1088850`); sem ele a fixture mede um
@@ -570,17 +578,22 @@ def _heroic_de_mentira(casa: Path, itens: list[dict[str, object]]) -> Path:
     faria a fixture mentir na direção mais cara — a de um catálogo que sabe
     mais do que o produto pode saber.
     """
-    cache = casa / ".config" / "heroic" / "store_cache"
+    heroic = (casa / ".config" if config is None else config) / "heroic"
+    cache = heroic / "store_cache"
     cache.mkdir(parents=True, exist_ok=True)
     (cache / "legendary_library.json").write_text(
         json.dumps({"library": itens}, ensure_ascii=False), encoding="utf-8"
     )
+    registro = plantar_o_registro(heroic, {
+        str(i["app_name"]): {"is_dlc": bool((i.get("install") or {}).get("is_dlc"))}
+        for i in itens if i.get("is_installed")
+    })
+    instalados = json.loads(registro.read_text(encoding="utf-8"))
     (cache / "umu.json").write_text(
         json.dumps({
-            f"legendary_{i['app_name']}": UMU_DO_GOTG
-            for i in itens
-            if i.get("is_installed") and not
-            (i.get("install") or {}).get("is_dlc")
+            f"legendary_{app}": UMU_DO_GOTG
+            for app, dado in instalados.items()
+            if not dado.get("is_dlc")
         }),
         encoding="utf-8",
     )
@@ -724,16 +737,19 @@ def test_o_jogo_do_heroic_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
     dá igual e a varredura volta sem olhar. O jogo só ganharia perfil no
     próximo arranque do daemon.
 
-    A biblioteca falsa mora no `$HOME` do teste — que a `tests/conftest.py`
-    desvia para um lar de mentira —, então o caminho inteiro roda sem dublê do
-    lado dos lançadores: `_talvez_semear_jogos` chama `assinatura_das_bibliotecas`
-    e `jogos_dos_lancadores` de verdade.
+    A biblioteca falsa mora no Heroic nativo do lar do teste — o
+    `$XDG_CONFIG_HOME`, que a `tests/conftest.py` desvia para um lar de
+    mentira, e que o censo segue como o Heroic segue (02/10/2026) —, então o
+    caminho inteiro roda sem dublê do lado dos lançadores:
+    `_talvez_semear_jogos` chama `assinatura_das_bibliotecas` e
+    `jogos_dos_lancadores` de verdade.
     """
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     casa = Path.home()
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or casa / ".config")
     destino = tmp_path / "perfis"
-    _heroic_de_mentira(casa, [])
+    _heroic_de_mentira(casa, [], config)
     monkeypatch.delenv(loader.SEED_SKIP_ENV_VAR, raising=False)
     monkeypatch.setattr(loader, "_ultima_varredura_de_jogos", None, raising=False)
     monkeypatch.setattr(loader, "_assinatura_da_biblioteca_vista", None, raising=False)
@@ -759,6 +775,7 @@ def test_o_jogo_do_heroic_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
                 "install": {"executable": "retail/gotg.exe"},
             }
         ],
+        config,
     )
     monkeypatch.setattr(loader, "_ultima_varredura_de_jogos", None, raising=False)
 

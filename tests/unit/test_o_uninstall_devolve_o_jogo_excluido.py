@@ -36,6 +36,7 @@ import yaml
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from hefesto_dualsense4unix.utils import memoria_dos_controles as m
+from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 from tests.unit.test_o_uninstall_nao_deixa_rastro import (
     _SO_A_BIBLIOTECA_PADRAO,
     SISTEMA,
@@ -87,6 +88,7 @@ def _heroic(lar: Path, jogos: dict[str, dict[str, object] | None]) -> Path:
         {f"legendary_{app}": f"umu-{100 + i}" for i, app in enumerate(jogos)}))
     (casa / "store_cache/legendary_library.json").write_text(json.dumps({"library": [
         {"app_name": app, "title": app, "is_installed": True} for app in jogos]}))
+    plantar_o_registro(casa, list(jogos))
     for app, copia in jogos.items():
         if copia is not None:
             (casa / "GamesConfig" / f"{app}.json").write_text(
@@ -276,6 +278,7 @@ def _excluir_um_de_cada(r: m.Raizes, monkeypatch: pytest.MonkeyPatch,
     (casa / "store_cache/umu.json").write_text(json.dumps({"legendary_A": "umu-100"}))
     (casa / "store_cache/legendary_library.json").write_text(json.dumps({"library": [
         {"app_name": "A", "title": "A", "is_installed": True}]}))
+    plantar_o_registro(casa, ["A"])
     dados = r.lar / ".var/app" / _LUTRIS / "data/lutris"
     yml = _lutris_no_harness(r.lar, dados)
     pasta = r.estado / m.SLUG / "launch_env"
