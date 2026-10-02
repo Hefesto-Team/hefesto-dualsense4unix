@@ -25,6 +25,10 @@ AS MORDIDAS (feitas em 02/10/2026, uma por vez, com o md5 conferido na volta):
    do daemon, nada se marca; sem o piso de 50/s, o 02:37 sai do veredito.
 8. sem a condição, o colapso da janela que varria conta; o «não sei» do
    ``Discovering`` lido como zero põe a janela no veredito.
+9. sem prazo nenhum, a pergunta ao soquete mudo fica presa e a régua reprova
+   em 2 s (sem pendurar a suíte); o daemon mudo no veredito reprova; e o
+   ``state_full`` pedido por outro nome devolve sempre «não respondeu», o que
+   a 9b reprova.
 """
 from __future__ import annotations
 
