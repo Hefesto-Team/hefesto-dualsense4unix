@@ -1281,9 +1281,21 @@ def _entrada_da_copia(entrada: Entrada) -> Entrada:
     """
     #: O «antes» de uma :data:`DELA_MANDA` é o da lista global, e numa cópia o
     #: desfazer o poria num jogo que nunca o teve: na cópia ela vale sem ele.
-    return Entrada(HEROIC_CONFIG, chaves={
-        k: Marca(list(m.valores), None) if k in DELA_MANDA else copy.deepcopy(m)
-        for k, m in entrada.chaves.items() if k not in PODEM_SER_DELA})
+    #: **E O VALOR DELE, NA CÓPIA, É DELA** (02/10/2026): o Heroic copia a
+    #: global para dentro do jogo, e a carona nunca troca a dela. Com o `0` dela
+    #: na global antes do Hefesto, o `0` de uma cópia é o dela copiado; lido como
+    #: nosso, o uninstall e a exclusão o tiravam, e o jogo voltava ao xalia.
+    chaves: dict[str, Marca] = {}
+    for k, m in entrada.chaves.items():
+        if k in PODEM_SER_DELA:
+            continue
+        if k not in DELA_MANDA:
+            chaves[k] = copy.deepcopy(m)
+            continue
+        nossos = [v for v in m.valores if v != m.antes]
+        if nossos:
+            chaves[k] = Marca(nossos, None)
+    return Entrada(HEROIC_CONFIG, chaves=chaves)
 
 
 def _desfazer_na_copia_do_jogo(alvo: Path, entrada: Entrada, feito: Desfeito) -> str | None:

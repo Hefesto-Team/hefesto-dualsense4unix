@@ -420,3 +420,48 @@ def test_o_um_que_ela_tirou_nao_volta_no_desfazer(casa: Path) -> None:
     assert _lista_global(heroic)[_XALIA] == "0"
     cpe.desfazer_as_estradas([_pasta()], casa)
     assert _XALIA not in _lista_global(heroic), "o desfazer devolveu o 1 que ela já tinha tirado"
+
+
+def test_o_zero_dela_copiado_para_o_jogo_fica_no_uninstall(casa: Path) -> None:
+    """O `0` dela na global antes do Hefesto, e o Heroic o copiou para o jogo A.
+
+    Medido em 02/10 no lar de mentira: o `0` da cópia de A era lido como nosso
+    (o registro da global anota o `0` como valor nosso), e o uninstall o
+    tirava; A voltava a abrir com o xalia ligado, e a global dela seguia com o
+    `0`. MORDIDA: em `_entrada_da_copia`, devolva a marca da cópia com todos os
+    `valores` da global (sem tirar o «antes» dela), e esta reprova pela cópia de A.
+    """
+    heroic = _heroic(casa, {"A": {"enviromentOptions": [
+        {"key": "MANGOHUD", "value": "1"}, {"key": _XALIA, "value": "0"}]}})
+    _global_dela(heroic, "0")
+    for _ in range(2):
+        _carona(casa)
+        assert (_lista_do_jogo(heroic, "A") or {}).get(_XALIA) == "0"
+    feitos, completo = cpe.desfazer_as_estradas([_pasta()], casa)
+    assert completo, [f.erro for f in feitos if f.erro]
+    assert _lista_global(heroic).get(_XALIA) == "0", "o uninstall tirou o 0 dela da global"
+    copia = _lista_do_jogo(heroic, "A") or {}
+    assert copia.get(_XALIA) == "0", (
+        f"o uninstall tirou da cópia de A o 0 que ela tinha antes do Hefesto: {copia}")
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in copia, "o nosso ficou na cópia de A"
+
+
+def test_o_excluido_que_segue_a_global_dela_fica_com_o_zero_dela(casa: Path) -> None:
+    """O `0` dela na global antes do Hefesto, e o jogo A excluído segue a global.
+
+    Sem o Hefesto, A abriria com o `0` dela. Medido em 02/10 no lar de mentira:
+    a exclusão dava a A uma lista própria sem o `0`, e a carona seguinte a
+    mantinha assim: o jogo excluído abria com o xalia ligado. MORDIDA: a mesma
+    de `test_o_zero_dela_copiado_para_o_jogo_fica_no_uninstall`.
+    """
+    heroic = _heroic(casa, {"A": {}, "B": {}})
+    _global_dela(heroic, "0")
+    _carona(casa)
+    assert lista_de_exclusao.adicionar(
+        _janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
+    for _ in range(2):
+        copia = _lista_do_jogo(heroic, "A")
+        assert copia is not None, "a exclusão não deu a A uma lista própria"
+        assert copia.get(_XALIA) == "0", f"o jogo excluído A perdeu o 0 dela: {copia}"
+        assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in copia, "o excluído levou o nosso"
+        _carona(casa)
