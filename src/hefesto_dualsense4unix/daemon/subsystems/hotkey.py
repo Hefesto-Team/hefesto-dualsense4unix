@@ -1006,8 +1006,10 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         import time as _time
 
         from hefesto_dualsense4unix.daemon.state_store import MANUAL_PROFILE_LOCK_SEC
-        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
-        from hefesto_dualsense4unix.utils.session import save_active_marker
+        from hefesto_dualsense4unix.profiles.manager import (
+            gerente_do_daemon,
+            os_perfis_de_escolher,
+        )
 
         # FEAT-NATIVE-MODE-01: em Modo Nativo o controle está solto para o jogo —
         # o ciclo de perfil (PS+dpad) NÃO troca de perfil (re-escreveria gatilhos).
@@ -1022,8 +1024,14 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         # O que este gesto tem de próprio é o `origin="manual"` lá embaixo: o
         # ciclo PS+D-pad é troca explícita dela. O mudo do microfone NÃO
         # atravessa, nem aqui: ele é do controle (O-MUDO-E-DO-CONTROLE-01).
+        #
+        # O FREESTYLE NÃO ENTRA NA RODA — a ordem dela de 02/10/2026: nenhum
+        # seletor de perfil o oferece, ligado ou desligado; ele é o botão «Modo
+        # Freestyle». Na roda, ativá-lo à mão acenderia o botão a cada volta.
+        # Com ele valendo (fora da roda), o passo conta como do primeiro da
+        # lista, e ativar outro perfil à mão o apaga.
         manager = gerente_do_daemon(daemon, store=daemon.store)
-        profiles = await daemon._run_blocking(manager.list_profiles)
+        profiles = os_perfis_de_escolher(await daemon._run_blocking(manager.list_profiles))
         if len(profiles) < 2:
             logger.info("profile_cycle_skip", n=len(profiles))
             return
@@ -1074,8 +1082,9 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             # nenhum cumprido.
             daemon.store.mark_manual_profile_lock(lock_antes)
             raise
-        with contextlib.suppress(Exception):
-            save_active_marker(profile.name)
+        # O ESPELHO (`active_profile.txt`) era escrito aqui de novo; desde
+        # 01/10/2026 quem o escreve é o dono da escolha, dentro do `activate`
+        # à mão (`utils.session.gravar_a_escolha`).
         logger.info("profile_cycled", direction=direction, to=profile.name)
 
     return _cycle

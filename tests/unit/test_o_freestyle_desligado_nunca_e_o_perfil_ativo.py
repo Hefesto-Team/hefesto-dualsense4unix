@@ -41,6 +41,8 @@ FREESTYLE = loader.NOME_DO_PADRAO
 AVATAR = "Avatar Legends"
 JANELA_DO_AVATAR = "steam_app_2424420"
 TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "~"}
+#: Um segundo perfil a escolher, para a roda do PS + D-pad ter por onde andar.
+OUTRO = "Navegador"
 
 
 def _o_disco() -> None:
@@ -136,9 +138,11 @@ def _saida_do_nativo() -> IpcServer:
 
 
 def _ciclo_do_ps() -> IpcServer:
-    """O PS + D-pad passa por todos os perfis, o Freestyle no meio: é gesto da mão."""
+    """O PS + D-pad dá três voltas: o Freestyle não está na roda (ordem de 02/10)."""
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import build_profile_cycle_callback
 
+    loader.save_profile(Profile(name=OUTRO, match=MatchCriteria(window_class=["firefox"]),
+                                priority=50), origem="régua")
     store, gerente, server = _o_par()
     gerente.activate(AVATAR, origin="manual")
     daemon = SimpleNamespace(store=store, controller=server.controller,
@@ -342,3 +346,41 @@ def test_o_profile_list_da_cli_nao_mostra_o_freestyle(aceso: bool) -> None:
     assert saida.exit_code == 0, saida.output
     assert AVATAR in saida.output
     assert FREESTYLE not in saida.output, saida.output
+
+
+@pytest.mark.parametrize("sentido", [+1, -1], ids=["PS-cima", "PS-baixo"])
+@pytest.mark.parametrize("aceso", [False, True], ids=["apagado", "aceso"])
+def test_a_roda_do_ps_e_d_pad_nao_passa_pelo_freestyle(aceso: bool, sentido: int) -> None:
+    """A roda de perfis do controle (PS + D-pad), com o botão apagado e aceso.
+
+    Conferência de 02/10/2026: a roda era o `manager.list_profiles()` inteiro,
+    e ativar o Freestyle à mão acende o botão — a cada volta da roda o Modo
+    Freestyle ligava sozinho no meio do jogo. Aceso, o primeiro passo ativa
+    outro perfil à mão e o apaga, como o «Ativar» da aba Perfis.
+
+    MORDIDA: tire o `os_perfis_de_escolher` do `build_profile_cycle_callback`
+    e as células reprovam com o Freestyle ativo.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.hotkey import build_profile_cycle_callback
+
+    _o_disco()
+    loader.save_profile(Profile(name=OUTRO, match=MatchCriteria(window_class=["firefox"]),
+                                priority=50), origem="régua")
+    store, gerente, server = _o_par()
+    gerente.activate(AVATAR, origin="manual")
+    if aceso:
+        asyncio.run(server._handle_freestyle_set({"ligado": True}))
+        assert store.active_profile == FREESTYLE
+    daemon = SimpleNamespace(store=store, controller=server.controller,
+                             _keyboard_device=None, _run_blocking=_bloqueante)
+    ciclo = build_profile_cycle_callback(daemon, sentido)  # type: ignore[arg-type]
+
+    vistos: list[str | None] = []
+    for _passo in range(5):
+        asyncio.run(ciclo())
+        vistos.append(store.active_profile)
+
+    assert FREESTYLE not in vistos, vistos
+    assert set(vistos) == {AVATAR, OUTRO}, vistos
+    assert store.freestyle_ligado is False
+
