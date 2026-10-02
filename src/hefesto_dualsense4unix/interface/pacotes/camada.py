@@ -235,9 +235,66 @@ def cartoes_da_pagina(pagina: str) -> list[str]:
     return [c for c, s in SECOES.items() if s.pagina == pagina]
 
 
+#: As forças que a seção por controle aceita (`ControllerRumbleOverride.policy`):
+#: o «auto» da mesa não é escolha que um controle guarde.
+_FORCAS_DE_UM_CONTROLE = frozenset({"economia", "balanceado", "max", "custom"})
+
+
+def vivos(ctx: Contexto, cartao: str, uniq: str | None) -> dict[str, Any]:
+    """O que o aparelho tem AGORA no cartão, na forma da seção do perfil.
+
+    É o último degrau do «o que vale agora» do «Só neste jogo»
+    (``o_padrao_do_computador.perfil_so_neste_jogo``): quando nem o jogo nem o
+    computador declaram a seção, o valor é o do aparelho, que o daemon publica
+    a cada tique. Só entra o que o daemon disse; o que ele não disse fica de
+    fora, e nunca vira um número digitado aqui.
+    """
+    state = ctx.state or {}
+    if cartao == "som" and uniq:
+        from .a02_controles import _bloco_do_speaker
+
+        bloco = _bloco_do_speaker(ctx.por_uniq(uniq)) or {}
+        volume = bloco.get("volume")
+        if isinstance(volume, int) and not isinstance(volume, bool):
+            return {"speaker": {"volume": volume, "muted": bool(bloco.get("muted"))}}
+        return {}
+    if cartao == "vibracao":
+        forca = str(state.get("rumble_policy") or "")
+        mult = state.get("rumble_mult_applied")
+        if forca in _FORCAS_DE_UM_CONTROLE - {"custom"}:
+            return {"rumble": {"policy": forca}}
+        if forca == "custom" and isinstance(mult, (int, float)) and not isinstance(mult, bool):
+            return {"rumble": {"policy": forca, "custom_mult": float(mult)}}
+        return {}
+    if cartao == "mouse":
+        rato = state.get("mouse_emulation")
+        if isinstance(rato, dict) and all(
+                isinstance(rato.get(c), int) and not isinstance(rato.get(c), bool)
+                for c in ("speed", "scroll_speed")):
+            return {"mouse": {"enabled": bool(rato.get("enabled")),
+                              "speed": rato["speed"], "scroll_speed": rato["scroll_speed"]}}
+        return {}
+    if cartao == "teclado":
+        teclado = state.get("keyboard_emulation")
+        if isinstance(teclado, dict) and isinstance(teclado.get("enabled"), bool):
+            return {"teclado_emulado": teclado["enabled"]}
+        return {}
+    return {}
+
+
 def marcas(pagina: str, ctx: Contexto) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
-    """``(da mesa, {uniq: do controle})``: o miolo de cada marca da página."""
-    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import SECOES, sobrepoe
+    """``(da mesa, {uniq: do controle})``: o miolo de cada marca da página.
+
+    O «Só neste jogo» só aparece quando o clique daria ao jogo escolha própria
+    no cartão (``pode_so_neste_jogo``): sem isso, a marca diz só «PC», e não
+    oferece um botão que aceita o clique e não muda nada.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        SECOES,
+        o_computador,
+        pode_so_neste_jogo,
+        sobrepoe,
+    )
 
     cartoes = cartoes_da_pagina(pagina)
     if not cartoes:
@@ -245,6 +302,14 @@ def marcas(pagina: str, ctx: Contexto) -> tuple[dict[str, str], dict[str, dict[s
     nome = _perfil.nome_do_ativo(ctx.state).strip()
     prof = _perfil_do_jogo(nome)
     jogo = prof.name if prof is not None else ""
+    computador = o_computador() if prof is not None else None
+
+    def _miolo(cartao: str, uniq: str | None) -> str:
+        sobre = prof is not None and sobrepoe(prof, cartao, uniq)
+        dono = jogo if sobre or pode_so_neste_jogo(
+            cartao, uniq, prof, computador, vivos(ctx, cartao, uniq)) else ""
+        return _marca.miolo(cartao, jogo=dono, sobrepoe=sobre)
+
     da_mesa: dict[str, str] = {}
     por_controle: dict[str, dict[str, str]] = {}
     for cartao in cartoes:
@@ -253,12 +318,9 @@ def marcas(pagina: str, ctx: Contexto) -> tuple[dict[str, str], dict[str, dict[s
                 uniq = str(c.get("uniq") or "")
                 if not uniq:
                     continue
-                sobre = prof is not None and sobrepoe(prof, cartao, uniq)
-                por_controle.setdefault(uniq, {})[_marca.campo(cartao)] = _marca.miolo(
-                    cartao, jogo=jogo, sobrepoe=sobre)
+                por_controle.setdefault(uniq, {})[_marca.campo(cartao)] = _miolo(cartao, uniq)
         else:
-            sobre = prof is not None and sobrepoe(prof, cartao)
-            da_mesa[_marca.campo(cartao)] = _marca.miolo(cartao, jogo=jogo, sobrepoe=sobre)
+            da_mesa[_marca.campo(cartao)] = _miolo(cartao, None)
     return da_mesa, por_controle
 
 
@@ -316,7 +378,7 @@ def so_neste_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     cartao, uniq, nome = _o_cartao_e_o_jogo(ctx, o)
     _perfil._com_o_src()
-    opc.so_neste_jogo(cartao, uniq, nome)
+    opc.so_neste_jogo(cartao, uniq, nome, vivos(ctx, cartao, uniq))
     _perfil.reaplicar(nome, ctx, p)
 
 
@@ -343,5 +405,6 @@ __all__ = [
     "com_a_camada",
     "marcas",
     "so_neste_jogo",
+    "vivos",
     "voltar_ao_do_computador",
 ]

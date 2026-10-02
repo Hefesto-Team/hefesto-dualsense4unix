@@ -331,3 +331,69 @@ def test_a_pintura_so_pousa_onde_a_pagina_tem_lugar(monkeypatch: pytest.MonkeyPa
     assert com["colunas"][UM][marca.campo("luz")] == marca.miolo("luz", jogo="Jogo X")
     assert com["colunas"][UM]["hex"] == "#000000"
     assert fora == {"colunas": {UM: {"hex": "#000000"}}}, "a pintura mexeu no pacote da aba"
+
+
+# ---------------------------------------------------------------------------
+# Régua 11, o botão que funciona: «Só neste jogo» muda o dono, ou não aparece
+# ---------------------------------------------------------------------------
+def _contexto_vivo(pac: Any, ativo: str, *, speed: int, scroll: int) -> Any:
+    """O contexto da régua com o mouse em ``speed``/``scroll`` (o resto como em `_contexto`)."""
+    ctx = _contexto(pac, ativo, UM)
+    ctx.state["mouse_emulation"] = {"enabled": True, "speed": speed, "scroll_speed": scroll}
+    return ctx
+
+
+def _miolo_do(pac: Any, ctx: Any, cartao: str) -> str:
+    da_mesa, por_controle = pac.camada.marcas(opc.SECOES[cartao].pagina, ctx)
+    if opc.SECOES[cartao].por_controle:
+        return por_controle[UM][marca.campo(cartao)]
+    return da_mesa[marca.campo(cartao)]
+
+
+@pytest.mark.parametrize("cartao", sorted(opc.SECOES))
+def test_so_neste_jogo_de_todo_cartao_muda_o_dono_num_pc_sem_padrao(cartao: str) -> None:
+    """Num computador sem padrão, o «Só neste jogo» de CADA cartão dá o cartão ao jogo.
+
+    O que vale agora, quando nem o jogo nem o computador declaram, é o que o
+    aparelho tem (o volume, a força, as velocidades, o teclado ligado). Medido
+    na conferência de 02/10/2026: sem esse degrau, o clique no som, na
+    vibração, no mouse e no teclado gravava o perfil igual, e a marca seguia
+    «PC · Só neste jogo», um botão que aceitava o clique e não mudava nada.
+
+    MORDIDA: tirar os ``vivos`` do gesto (``so_neste_jogo`` sem eles) reprova
+    no som, na vibração, no mouse e no teclado.
+    """
+    pac = _pacotes()
+    save_profile(_perfil("Jogo X"))
+    ctx = _contexto_vivo(pac, "Jogo X", speed=9, scroll=2)
+    uniq = UM if opc.SECOES[cartao].por_controle else None
+    assert _miolo_do(pac, ctx, cartao) == marca.miolo(cartao, jogo="Jogo X", sobrepoe=False)
+    gesto = pac.gesto_da_pagina(opc.SECOES[cartao].pagina, marca.SO_NESTE_JOGO)
+    assert gesto is not None
+    gesto(ctx, {"linha": cartao, "uniq": uniq or ""}, _Ponte())
+    assert opc.sobrepoe(load_profile("Jogo X"), cartao, uniq), (
+        f"«Só neste jogo» em {cartao} não deu o cartão ao jogo")
+    assert _miolo_do(pac, ctx, cartao) == marca.miolo(cartao, jogo="Jogo X", sobrepoe=True)
+
+
+def test_o_botao_que_nao_mudaria_nada_nao_aparece_e_recusa_sem_gravar() -> None:
+    """As velocidades do mouse no de fábrica: a marca diz só «PC», e o clique velho recusa.
+
+    O esquema não distingue «o jogo escolheu 6 e 1» de «ninguém escolheu», então
+    copiar o de fábrica não daria o cartão ao jogo. O botão não se oferece, e o
+    clique que chega de um tique velho recusa dizendo, sem tocar o arquivo.
+
+    MORDIDA: devolver o miolo sem perguntar ao ``pode_so_neste_jogo`` reprova.
+    """
+    pac = _pacotes()
+    caminho = save_profile(_perfil("Jogo X"))
+    antes = caminho.read_bytes()
+    ctx = _contexto_vivo(pac, "Jogo X", speed=6, scroll=1)
+    miolo = _miolo_do(pac, ctx, "mouse")
+    assert miolo == marca.miolo("mouse"), miolo
+    assert "data-gesto" not in miolo
+    gesto = pac.gesto_da_pagina("06-navegacao.html", marca.SO_NESTE_JOGO)
+    assert gesto is not None
+    with pytest.raises(RuntimeError, match="de fábrica"):
+        gesto(ctx, {"linha": "mouse"}, _Ponte())
+    assert caminho.read_bytes() == antes

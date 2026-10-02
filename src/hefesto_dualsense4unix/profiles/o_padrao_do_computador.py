@@ -147,6 +147,14 @@ class OFreestyleNaoSobrepoeError(RuntimeError):
     """«Só neste jogo» pedido com o Freestyle: ele não sobrepõe nada."""
 
 
+class OJogoNaoTeriaOQueGuardarError(RuntimeError):
+    """«Só neste jogo» que não daria ao jogo escolha nenhuma naquele cartão.
+
+    A marca não oferece o botão nesse caso (:func:`pode_so_neste_jogo`); a
+    recusa é para o clique que chega de um tique velho, e nunca grava.
+    """
+
+
 # ---------------------------------------------------------------------------
 # A identidade do controle
 # ---------------------------------------------------------------------------
@@ -1038,29 +1046,37 @@ def _o_que_vale_no_controle_sem_entrada(vista: Profile, nome: str) -> dict[str, 
     return dict(_DE_FABRICA_NO_CONTROLE.get(nome, {}))
 
 
-def so_neste_jogo(cartao: str, uniq: object, perfil: str) -> Profile:
-    """Copia para o perfil o que vale agora no cartão. Daí em diante, o jogo manda.
+def perfil_so_neste_jogo(
+    cartao: str,
+    uniq: object,
+    cru_perfil: Profile,
+    computador: Any,
+    vivos: Mapping[str, Any] | None = None,
+) -> Profile:
+    """O perfil depois do «Só neste jogo», em memória: o disco não muda.
 
-    Com ``uniq``, só aquele controle; sem, as seções globais e todo controle que
-    o computador ou o perfil conhecem.
+    Copia o que vale agora no cartão. Com ``uniq``, só aquele controle; sem, as
+    seções globais e todo controle que o computador ou o perfil conhecem.
+
+    ``vivos`` é ``{seção: valor}`` do que o aparelho tem AGORA, lido pela tela
+    (o volume do alto-falante daquele controle, a força da mesa, as
+    velocidades do mouse e o teclado ligado). É o último degrau de «o que vale
+    agora»: quando nem o jogo nem o computador declaram a seção, o que vale é
+    o que está no aparelho. Sem ele, o «Só neste jogo» do som, da vibração, do
+    mouse e do teclado não copiava nada num computador ainda sem padrão, e o
+    clique passava sem efeito (medido na conferência de 02/10/2026).
     """
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-
-    if e_o_freestyle(perfil):
-        raise OFreestyleNaoSobrepoeError("o Freestyle não sobrepõe nada")
-    from hefesto_dualsense4unix.profiles import loader
-
-    cru_perfil = loader.load_profile(perfil)
-    computador = o_computador()
     vista = perfil_que_vale(cru_perfil, computador)
     secao = SECOES[cartao]
+    vivos = vivos or {}
     cru = cru_perfil.model_dump(mode="json", exclude_unset=True)
     if uniq is None:
         for nome in secao.globais:
             valor = getattr(vista, nome, None)
-            if valor is None:
-                continue
-            cru[nome] = valor.model_dump(mode="json") if nome in _MODELOS else valor
+            if valor is not None:
+                cru[nome] = valor.model_dump(mode="json") if nome in _MODELOS else valor
+            elif nome in vivos and vivos[nome] is not None:
+                cru[nome] = vivos[nome]
     identidades = _identidades(vista, uniq)
     if uniq is None:
         identidades = sorted(set(identidades) | set(computador.controles))
@@ -1077,13 +1093,62 @@ def so_neste_jogo(cartao: str, uniq: object, perfil: str) -> Profile:
                 if valor is not None:
                     entrada[nome] = valor.model_dump(mode="json", exclude_unset=True)
                 elif uniq is not None and nome not in entrada:
-                    copia = _o_que_vale_no_controle_sem_entrada(vista, nome)
+                    copia = (_o_que_vale_no_controle_sem_entrada(vista, nome)
+                             or dict(vivos.get(nome) or {}))
                     if copia:
                         entrada[nome] = copia
             if entrada:
                 controles[original] = entrada
         cru["controllers"] = controles or None
-    novo = Profile.model_validate(cru)
+    return Profile.model_validate(cru)
+
+
+def pode_so_neste_jogo(
+    cartao: str,
+    uniq: object,
+    cru_perfil: Profile | None,
+    computador: Any = None,
+    vivos: Mapping[str, Any] | None = None,
+) -> bool:
+    """O «Só neste jogo» daria ao jogo escolha própria neste cartão?
+
+    É a pergunta da marca antes de oferecer o botão: um botão que aceita o
+    clique e não muda nada é o defeito que *«tudo na interface deveria
+    funcionar»* proíbe. Não é o caso quando o que vale agora é o de fábrica de
+    uma seção densa (as velocidades do mouse em 6 e 1, por exemplo): o
+    esquema não distingue «o jogo escolheu o de fábrica» de «ninguém
+    escolheu». Nunca levanta: é pintura de tique.
+    """
+    if cru_perfil is None or e_o_freestyle(cru_perfil.name):
+        return False
+    try:
+        novo = perfil_so_neste_jogo(
+            cartao, uniq, cru_perfil,
+            computador if computador is not None else o_computador(), vivos)
+    except Exception:
+        return False
+    return sobrepoe(novo, cartao, uniq)
+
+
+def so_neste_jogo(
+    cartao: str, uniq: object, perfil: str, vivos: Mapping[str, Any] | None = None
+) -> Profile:
+    """Copia para o perfil o que vale agora no cartão. Daí em diante, o jogo manda.
+
+    Grava só quando a cópia dá ao jogo escolha própria no cartão; se não daria,
+    recusa sem gravar (:class:`OJogoNaoTeriaOQueGuardarError`).
+    """
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    if e_o_freestyle(perfil):
+        raise OFreestyleNaoSobrepoeError("o Freestyle não sobrepõe nada")
+    from hefesto_dualsense4unix.profiles import loader
+
+    novo = perfil_so_neste_jogo(cartao, uniq, loader.load_profile(perfil), o_computador(),
+                                vivos)
+    if not sobrepoe(novo, cartao, uniq):
+        raise OJogoNaoTeriaOQueGuardarError(
+            "este cartão está no de fábrica: o jogo não teria o que guardar.")
     save_profile(novo, origem="so-neste-jogo")
     logger.info("cartao_so_neste_jogo", cartao=cartao, perfil=perfil, uniq=str(uniq or ""))
     return novo
@@ -1175,6 +1240,7 @@ __all__ = [
     "SECOES",
     "SUFIXO_DA_COPIA",
     "OFreestyleNaoSobrepoeError",
+    "OJogoNaoTeriaOQueGuardarError",
     "Secao",
     "carregar_o_que_vale",
     "ceder_ao_computador",
@@ -1194,7 +1260,9 @@ __all__ = [
     "o_que_vale",
     "onde_grava",
     "perfil_que_vale",
+    "perfil_so_neste_jogo",
     "perfil_vazio",
+    "pode_so_neste_jogo",
     "restaurar_o_computador",
     "selo_da_maquina",
     "semente_do_freestyle",
