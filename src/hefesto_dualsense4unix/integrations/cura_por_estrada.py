@@ -1487,10 +1487,6 @@ ESPERA_DA_JANELA_S = 5.0
 #: refaz; sem a trava, ela pula a transição e diz `carona_esperou_a_janela`.
 ESPERA_DO_SERVICO_S = 1.0
 
-#: De quanto em quanto tempo quem espera torna a perguntar ao `flock`.
-_PASSO_DA_ESPERA_S = 0.02
-
-
 @dataclass
 class _Trava:
     """A trava de UM arquivo, neste processo."""
@@ -1543,18 +1539,61 @@ def _travar_o_arquivo(alvo: Path, prazo: float, criar: bool) -> int | None:
         fd = os.open(alvo, os.O_RDWR | os.O_CREAT, 0o600)
     except OSError:
         return -1
-    while True:
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return fd
+    except BlockingIOError:
+        pass
+    except OSError:
+        os.close(fd)
+        return -1
+    if time.monotonic() >= prazo:
+        os.close(fd)
+        return None
+    return _esperar_na_fila(fcntl, fd, prazo)
+
+
+def _esperar_na_fila(fcntl: ModuleType, fd: int, prazo: float) -> int | None:
+    """Espera o `flock` na fila do núcleo, com prazo; ``fd`` / ``-1`` / ``None``.
+
+    QUEM ESPERA ESTÁ NA FILA, e não perguntando de tempos em tempos: medido
+    em 02/10/2026, quem perguntava a cada 20 ms perdia para um escritor que
+    retoma a trava logo depois de soltá-la (9 de 10 esperas passaram de 2 s;
+    a régua da corrida reprovou 2 de 12 vezes com o «Excluir» voltando
+    «erro»). Na fila, o `LOCK_UN` do outro acorda quem espera, e a espera
+    foi de no máximo 4 ms. O `flock` bloqueante não tem prazo: ele corre num
+    fio próprio, e quem chama espera o fio até o prazo. Se o prazo passa, o
+    descritor fica com o fio, que solta e fecha assim que pegar a trava;
+    ninguém mais o fecha (um descritor fechado por baixo de um `flock` em
+    curso pode ter o número reusado e travar outro arquivo).
+    """
+    pegou = threading.Event()
+    guarda = threading.Lock()
+    desistiu = [False]
+    falhou = [False]
+
+    def esperar() -> None:
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return fd
-        except BlockingIOError:
-            if time.monotonic() >= prazo:
-                os.close(fd)
-                return None
-            time.sleep(_PASSO_DA_ESPERA_S)
+            fcntl.flock(fd, fcntl.LOCK_EX)
         except OSError:
+            falhou[0] = True
+        with guarda:
+            if desistiu[0]:
+                _soltar(fd)
+                return
+            pegou.set()
+
+    threading.Thread(target=esperar, name="trava-da-lista", daemon=True).start()
+    pegou.wait(max(0.0, prazo - time.monotonic()))
+    with guarda:
+        if not pegou.is_set():
+            desistiu[0] = True
+            return None
+    if falhou[0]:
+        with contextlib.suppress(OSError):
             os.close(fd)
-            return -1
+        return -1
+    return fd
 
 
 def _soltar(fd: int) -> None:

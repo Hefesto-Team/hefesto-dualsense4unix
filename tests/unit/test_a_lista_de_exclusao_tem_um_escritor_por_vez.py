@@ -299,6 +299,52 @@ def test_a_carona_do_servico_nao_espera_a_janela(
     assert [x for x in diario if x.get("event") == "carona_esperou_a_janela"], diario
 
 
+#: O escritor que retoma a trava logo depois de soltá-la (a carona em
+#: sequência, a anotação em laço): segura 2 ms, solta, reabre e pede de novo.
+_RETOMA_A_TRAVA = """
+import fcntl, os, sys, time
+from pathlib import Path
+trava, pronto, fim = (Path(x) for x in sys.argv[1:4])
+trava.parent.mkdir(parents=True, exist_ok=True)
+prazo = time.monotonic() + 60
+while not fim.exists() and time.monotonic() < prazo:
+    fd = os.open(trava, os.O_RDWR | os.O_CREAT, 0o600)
+    fcntl.flock(fd, fcntl.LOCK_EX)
+    pronto.touch()
+    time.sleep(0.002)
+    fcntl.flock(fd, fcntl.LOCK_UN)
+    os.close(fd)
+"""
+
+
+def test_quem_espera_nao_perde_para_quem_retoma(tmp_path: Path, _lar: Path) -> None:
+    """Outro processo retoma a trava logo depois de soltá-la: quem espera pega
+    a trava na vez seguinte, e não no fim do prazo.
+
+    MORDIDA: a espera de antes, que perguntava ao `flock` a cada 20 ms (o
+    `LOCK_NB` em laço no lugar de `_esperar_na_fila`) — medido em 02/10/2026,
+    9 de 10 esperas passavam de 2 s, e o «Excluir» voltava «erro».
+    """
+    pronto, fim = tmp_path / "pronto", tmp_path / "fim"
+    outro = subprocess.Popen(
+        [sys.executable, "-c", _RETOMA_A_TRAVA, str(lx.caminho().parent / cpe.NOME_DA_TRAVA),
+         str(pronto), str(fim)], env=_ambiente(_lar), text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gastos: list[float] = []
+    try:
+        _esperar_o_arquivo(pronto, outro)
+        for _ in range(5):
+            antes = time.monotonic()
+            with cpe.trava_da_lista(espera=2.0) as na_mao:
+                gastos.append(time.monotonic() - antes)
+                assert na_mao, (
+                    f"quem espera perdeu a trava para quem a retoma (esperas: {gastos})")
+    finally:
+        fim.touch()
+        outro.communicate(timeout=30)
+    assert max(gastos) < 1.0, f"a espera passou de 1 s: {gastos}"
+
+
 def test_sem_a_trava_no_prazo_o_excluir_nao_escreve(
         _lar: Path, _a_janela_segura: subprocess.Popen[str],
         monkeypatch: pytest.MonkeyPatch) -> None:
@@ -318,6 +364,8 @@ def test_o_desfazer_pelo_python_do_sistema_espera_a_trava(tmp_path: Path, _lar: 
 
     MORDIDA: um import de fora da biblioteca padrão no caminho da trava (um
     `import yaml` no `trava_da_lista`) — o desfazer cai e não diz o que fez.
+    E: o desfazer sem a trava (`desfazer_as_estradas` indo direto ao
+    `_desfazer_na_trava`) — ele escreve com a trava na mão de outro.
     """
     py = shutil.which("python3", path=SISTEMA)
     if py is None:
@@ -339,9 +387,15 @@ def test_o_desfazer_pelo_python_do_sistema_espera_a_trava(tmp_path: Path, _lar: 
             env={"HOME": str(_lar), "XDG_CONFIG_HOME": str(_lar / ".config"),
                  "PATH": SISTEMA, "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1"},
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=str(tmp_path))
-        time.sleep(0.6)
+        # Dois segundos (o prazo do desfazer é o da janela, 5 s): sem a trava,
+        # o desfazer escreveria bem antes disso, e o `python3` que demora a
+        # nascer numa máquina carregada não passa por «esperou».
+        prazo = time.monotonic() + 2.0
+        mexeu = False
+        while time.monotonic() < prazo and not mexeu and desfazer.poll() is None:
+            time.sleep(0.05)
+            mexeu = "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in (casa / "config.json").read_text()
         esperava = desfazer.poll() is None
-        mexeu = "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in (casa / "config.json").read_text()
     saida, erro = desfazer.communicate(timeout=60)
     assert desfazer.returncode == 0, saida + erro
     assert esperava and not mexeu, (
