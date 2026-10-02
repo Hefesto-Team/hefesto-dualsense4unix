@@ -28,11 +28,7 @@ ISENTOS_INTEIROS: dict[str, str] = {
     ),
 }
 
-ISENTOS_EM_COMENTARIO: dict[str, str] = {
-    "src/hefesto_dualsense4unix/interface/aba01.py": (
-        "a lápide do INTERRUPTOR conta por que as duas metades saíram em 31/08"
-    ),
-}
+ISENTOS_EM_COMENTARIO: dict[str, str] = {}
 
 
 def _ocorrencias_no_fonte(
@@ -182,19 +178,6 @@ def test_a_guarda_do_fonte_reprova_o_dono_da_lista_sem_a_isencao() -> None:
         f"da lista, e a lista tem {list(FRASES_BANIDAS)}. Se ela não acha nem "
         f"o dono, ela não está lendo os literais de ninguém.\n  "
         + "\n  ".join(dono)
-    )
-
-
-def test_a_guarda_do_fonte_reprova_a_lapide_do_aba01_sem_a_isencao() -> None:
-    """E a segunda isenção também é PROVADA, não declarada de graça."""
-    sem_isencao = _ocorrencias_no_fonte(isentos_em_comentario={})
-    lapide = [a for a in sem_isencao
-              if a.startswith("src/hefesto_dualsense4unix/interface/aba01.py:")
-              and "comentário" in a]
-    assert lapide, (
-        "sem a isenção a régua não achou a lápide de `aba01.py` — o canal dos "
-        "comentários parou de ser lido, e uma frase banida escrita em "
-        "comentário passaria por baixo dela."
     )
 
 

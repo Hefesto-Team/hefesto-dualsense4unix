@@ -395,6 +395,18 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
 }
 
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
+    "HEFESTO_JOGADOR": (
+        "02/10/2026 — o Hefesto PÕE esta chave no ambiente do script que ela escolhe para um "
+        "gesto do controle (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01): o script dela lê de qual"
+        " jogador e de qual transporte veio o gesto. Quem a liga é o próprio despachante, a cada "
+        "gesto."
+    ),
+    "HEFESTO_TRANSPORTE": (
+        "02/10/2026 — o Hefesto PÕE esta chave no ambiente do script que ela escolhe para um "
+        "gesto do controle (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01): o script dela lê de qual"
+        " jogador e de qual transporte veio o gesto. Quem a liga é o próprio despachante, a cada "
+        "gesto."
+    ),
     "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
         "A chave que DESLIGA o vigia das conexões de rádio "
         "(daemon/subsystems/conexoes.py). É promessa dela, de 18/09/2026: "
@@ -476,6 +488,16 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
 }
 
 _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
+    "HEFESTO_JOGADOR": (
+        "daemon/subsystems/hotkey.py::_rodar_o_script_do_gesto",
+        "A MÃO é o despachante dos gestos: ele monta o ambiente do script dela com esta chave "
+        "antes de rodá-lo.",
+    ),
+    "HEFESTO_TRANSPORTE": (
+        "daemon/subsystems/hotkey.py::_rodar_o_script_do_gesto",
+        "A MÃO é o despachante dos gestos: ele monta o ambiente do script dela com esta chave "
+        "antes de rodá-lo.",
+    ),
     "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
         "daemon/subsystems/conexoes.py::ConexoesSubsystem",
         "A MÃO É O DEFAULT, e por isso não há porta que LIGUE esta chave: "
@@ -597,6 +619,11 @@ _SEM_MAO_HOJE: dict[str, str] = {
 
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "integrations/endpoint_de_haptica.py::nome_do_endpoint": (
+        "02/10/2026 — é o instrumento, não promessa ao produto: `scripts/o_basico.py` "
+        "(o retrato do básico) o importa para casar cada controle com o nome do "
+        "endpoint da háptica; o produto monta o nome pelo dono da marca do aparelho."
+    ),
     "daemon/ganho_da_haptica.py::linear_do_cru": (
         "29/09/2026, O-GANHO-DA-HAPTICA-TEM-DONO-01 — é o instrumento das "
         "réguas, não promessa ao produto: traduz o volume CRU que o servidor de "

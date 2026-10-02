@@ -1633,15 +1633,6 @@ def _yaml() -> ModuleType | None:
     return yaml
 
 
-def pares_da_camada_do_lutris(
-    lar: Path | None = None, pasta_do_ambiente: Path | None = None, *,
-    pelo_proton: bool = False,
-) -> dict[str, str]:
-    """O que o `.yml` de um jogo excluído do Lutris Flatpak precisa cobrir."""
-    base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
-    return _com_o_padrao_do_jogo(base, por_jogo, pelo_proton=pelo_proton)
-
-
 def _com_o_padrao_do_jogo(base: dict[str, str], por_jogo: frozenset[str], *,
                           pelo_proton: bool) -> dict[str, str]:
     """A camada da caixa com o «não veio» das chaves que dependem do jogo."""

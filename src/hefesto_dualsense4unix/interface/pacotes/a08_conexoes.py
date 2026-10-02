@@ -2184,7 +2184,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"O dongle fica acima da cabeça de quem joga sentado?" — grava a resposta.
 
     É uma das duas coisas que barramento nenhum responde, e por isso ela é
-    DECLARADA: `MesaDeclarada.altura_da_antena` (`utils/maquina.py:140`), que só
+    DECLARADA: `MesaDeclarada.altura_da_antena` (`utils/maquina.py:141`), que só
     aceita `"acima"`, `"abaixo"` ou `None`.
 
     QUEM CONSOME: `exame_da_mesa.vizinhanca_das_portas` recebe
@@ -2207,7 +2207,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def sala_visada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Tem gente sentada entre o dongle e o sofá?" — grava a resposta.
 
-    O par da de cima: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:149`),
+    O par da de cima: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:150`),
     `"com_gente"` / `"livre"` / `None`. Corpo humano absorve 2,4 GHz e nenhum
     barramento sabe disso — é o que o cabeçalho do `utils/maquina.py` chama de "o
     que nenhum barramento sabe".

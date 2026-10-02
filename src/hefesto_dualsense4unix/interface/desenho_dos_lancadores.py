@@ -61,7 +61,7 @@ from pathlib import Path
 #:
 #: `nao_sei` NASCEU DA MEDIÇÃO, e não do desenho: o produto tem `zero` função
 #: que examine Heroic, Lutris, RetroArch, Dolphin ou mGBA — as cinco só aparecem
-#: em COMENTÁRIO (`daemon/subsystems/hotkey.py:37`, `daemon/lifecycle.py:1407`,
+#: em COMENTÁRIO (`daemon/subsystems/hotkey.py:37`, `daemon/lifecycle.py:1408`,
 #: `profiles/schema.py:1099`). Sem este selo, o cartão do Heroic teria de
 #: escolher entre `CHEGAM` e `NÃO CHEGAM`, e as duas seriam afirmação sobre um
 #: lançador que o produto nunca olhou. **"Não sei" é resposta; palpite não é.**
