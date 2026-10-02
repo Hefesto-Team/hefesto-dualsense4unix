@@ -418,11 +418,15 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
     excluído herdava da caixa o `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o
     `PROTON_DISABLE_HIDRAW` — zero controles com o Modo Nativo em foco.
 
-    MORDIDA: a carona do `.yml` lendo o que falta no registro (`k not in
-    dict(yml.pares)`); reprova pelo `.yml`.
+    MORDIDAS: a carona do `.yml` lendo o que falta no registro (`k not in
+    dict(yml.pares)`), reprova pelo `.yml`; e o «antes» perdido quando o arquivo
+    é o de antes, reprova pela volta, que deixa de ser byte a byte.
     """
     casa = _heroic(lar, {"A": None})
     ymls = _lutris(lar, {"q": "11"})
+    #: Um comentário dela: só a volta byte a byte o guarda (o PyYAML o perde).
+    original = "# o jogo dela\n" + ymls["q"].read_text()
+    ymls["q"].write_text(original)
     _carona(lar)
     assert lx.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
     assert lx.adicionar("steam_app_70000", lancador="lutris", nome="Q", lar=lar) == "adicionado"
@@ -447,8 +451,8 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
                                            "PROTON_DISABLE_HIDRAW"}, (
         f"o jogo excluído do Heroic voltou a seguir a global com o nosso: {propria}")
     assert lx.tirar("steam_app_70000", lar=lar) == "removido"
-    env = (yaml.safe_load(ymls["q"].read_text()).get("system") or {}).get("env") or {}
-    assert env == {"MANGOHUD": "1"}, f"o «Tirar» de depois não devolveu o `.yml`: {env}"
+    assert ymls["q"].read_text() == original, (
+        f"o «Tirar» de depois não devolveu o `.yml` byte a byte: {ymls['q'].read_text()!r}")
 
 
 def test_o_caminho_da_lista_e_um_so() -> None:
