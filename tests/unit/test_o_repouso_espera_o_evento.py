@@ -1430,6 +1430,7 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     VPAD_HID_PHYS,
     player_mac,
 )
+from hefesto_dualsense4unix.integrations.uinput_gamepad import XBOX360_NAME
 
 #: A mesa de 29/09: 54 nós de entrada, quatro deles por vpad `uhid` (o
 #: touchpad, os sensores, o gamepad e o «Headset Jack», com o mesmo `uniq`).
@@ -1490,6 +1491,10 @@ class _MesaDoVpad:
         if hidraw is not None:
             self.hidraw(dir_hid, hidraw)
         return dir_hid
+
+    def uinput(self, nome: str) -> str:
+        """Um pad `uinput` (o modo Xbox): evdev puro, sem `uniq` e sem hidraw."""
+        return self._no(self.devices / "virtual", nome, "")
 
     def hidraw(self, dir_hid: Path, hidraw: str) -> None:
         (dir_hid / "hidraw" / hidraw).mkdir(parents=True)
@@ -1681,6 +1686,30 @@ class TestONoDoVpadPelaGeracao:
         relogio.agora += 3.0
         com = h._no_do_vpad_cached(player_mac(5), _nome_do_vpad(5))
         assert com["hidraw"] == str(mesa_do_vpad.nos / "hidraw5")
+
+    def test_o_pad_do_xbox_casa_pelo_nome_e_o_segundo_desfaz_a_resposta(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
+    ) -> None:
+        """O modo Xbox: o pad `uinput` não tem `uniq`, e casa pelo nome.
+
+        Uma varredura em 40 perguntas. Quando o pad do P2 nasce com o MESMO
+        nome, a pergunta seguinte do P1 é «não sei» (nada diz qual nó é de
+        quem), e não o nó guardado.
+        MORDIDA: tire a geração de `/dev/input` da ficha, e o P1 segue com o nó
+        guardado depois que o P2 nasceu.
+        """
+        h = _SoOCache()
+        evento = mesa_do_vpad.uinput(XBOX360_NAME)
+        blocos: list[dict[str, Any]] = []
+        with contando() as conta:
+            for _ in range(40):
+                blocos.append(h._no_do_vpad_cached(None, XBOX360_NAME))
+                relogio.agora += 3.0
+        assert _varreduras(conta, mesa_do_vpad) == 1
+        assert blocos[-1]["evdev"] == str(mesa_do_vpad.entradas / evento)
+        assert blocos[-1]["hidraw"] is None
+        mesa_do_vpad.uinput(XBOX360_NAME)
+        assert h._no_do_vpad_cached(None, XBOX360_NAME) == no_mod.NO_DESCONHECIDO
 
     def test_desarmado_o_ttl_de_sempre(
         self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
