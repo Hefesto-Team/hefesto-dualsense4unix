@@ -570,9 +570,15 @@ def _chamar(h: Any, **params: Any) -> dict[str, Any]:
 
 
 def test_o_metodo_desliga_grava_e_diz_o_alcance(perfis: Any) -> None:
-    """Do IPC ao disco: o giro cai, o perfil guarda, e a resposta é honesta."""
+    """Do IPC ao disco: o giro cai, o disco guarda, e a resposta é honesta.
+
+    O DISCO É O QUE VALE desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01
+    (01/10/2026): o perfil sem sensores próprios deixa o interruptor ir ao
+    computador, e a vista do perfil é o que o aparelho recebe.
+    """
     from hefesto_dualsense4unix.profiles import loader as loader_module
     from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
     save_profile(Profile(name="Bancada", match=MatchAny()))
     h = _handlers(ativo="Bancada", primario=PECA)
@@ -585,7 +591,7 @@ def test_o_metodo_desliga_grava_e_diz_o_alcance(perfis: Any) -> None:
     assert corpo["alcance"] == {"report": "aplicado", "evdev": "held"}
     assert corpo["ressalva"] is None
     assert REGISTRO.estado(PECA).giroscopio is False
-    dele = (loader_module.load_profile("Bancada").controllers or {})[
+    dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[
         chave_de_sensor(PECA)
     ]
     assert dele.sensores is not None and dele.sensores.giroscopio is False
@@ -627,18 +633,27 @@ def test_ligar_de_volta_nao_tem_ressalva(perfis: Any) -> None:
     assert corpo["ressalva"] is None
 
 
-def test_sem_perfil_ativo_o_interruptor_ainda_vale(perfis: Any) -> None:
-    """Meio interruptor é melhor que nenhum — e a resposta diz que não gravou.
+def test_sem_perfil_ativo_o_interruptor_vale_e_vai_ao_computador(perfis: Any) -> None:
+    """Sem perfil ativo, o interruptor vale e sobrevive: ele é do computador.
 
     Recusar o ato inteiro por falta de perfil deixaria o giro chegando ao jogo
-    porque um arquivo não existia.
+    porque um arquivo não existia. Até 01/10/2026 ele valia sem gravar; desde a
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 os sensores são do computador,
+    e o `maquina.json` guarda a escolha.
+
+    MORDIDA: devolver o «sem perfil não grava» ao handler reprova aqui.
     """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
     h = _handlers(ativo=None, primario=PECA)
 
     corpo = _chamar(h, uniq=PECA, giroscopio=False)
 
-    assert corpo["status"] == "ok" and corpo["gravado"] is False
+    assert corpo["status"] == "ok" and corpo["gravado"] is True
+    assert corpo["onde"] == "computador"
     assert REGISTRO.estado(PECA).giroscopio is False
+    sensores = o_computador().controles[chave_de_sensor(PECA)].sensores
+    assert sensores is not None and sensores.giroscopio is False
 
 
 def test_a_mesa_vazia_recusa_dizendo(perfis: Any) -> None:

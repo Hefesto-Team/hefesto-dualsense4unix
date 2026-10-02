@@ -58,7 +58,6 @@ AS MORDIDAS DESTE ARQUIVO
 """
 from __future__ import annotations
 
-import json
 import pathlib
 import sys
 import threading
@@ -172,18 +171,34 @@ def _arquivo_do_perfil() -> pathlib.Path | None:
 
 def _bytes_do_perfil() -> bytes:
     """O arquivo CRU — é assim que *"não gravou"* se mede, sem perguntar ao dublê."""
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
     alvo = _arquivo_do_perfil()
-    return alvo.read_bytes() if alvo is not None else b""
+    # O COMPUTADOR JUNTO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o som
+    # é dele, e «não gravou» vale para os dois arquivos.
+    maquina = caminho_da_maquina()
+    return ((alvo.read_bytes() if alvo is not None else b"")
+            + (maquina.read_bytes() if maquina.exists() else b""))
 
 
 def _do_controle(uniq_chave: str) -> dict[str, Any]:
-    alvo = _arquivo_do_perfil()
-    if alvo is None:
-        return {}
-    lido = json.loads(alvo.read_text(encoding="utf-8"))
-    bloco = (lido.get("controllers") or {}).get(uniq_chave)
-    return bloco if isinstance(bloco, dict) else {}
+    """O bloco que VALE daquele controle: o do perfil por cima do do computador.
 
+    Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o som é do
+    computador: o clique grava no `maquina.json`, e no perfil só quando ele já
+    sobrepõe o cartão. A régua lê o que vale, que é o que o aparelho recebe na
+    ativação, e não um dos dois arquivos.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        carregar_o_que_vale,
+    )
+
+    try:
+        vista = carregar_o_que_vale(NOME)
+    except FileNotFoundError:
+        return {}
+    bloco = (vista.controllers or {}).get(uniq_chave)
+    return bloco.model_dump(mode="json", exclude_unset=True) if bloco is not None else {}
 
 def _dele(uniq: str = P1) -> dict[str, Any]:
     """O que o daemon publica: sabe o mudo do microfone e o volume do alto-falante."""

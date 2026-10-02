@@ -538,10 +538,14 @@ class _PonteDeMentira:
 
 
 def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
-    """A pílula «Forte» do P3: o disco dela recebe o Forte SÓ no override do P3.
+    """A pílula «Forte» do P3: o disco dela recebe o Forte SÓ no P3.
 
     E a ponte é chamada uma vez, com a palavra e o MAC do P3 — é o que o
     daemon de mentira da prova de tela anota como `led.player_brightness_set`.
+
+    O DISCO É O DO COMPUTADOR desde 01/10/2026
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o perfil desta régua não
+    sobrepõe a luz, e o arquivo dele fica byte a byte.
     """
     import json
 
@@ -549,8 +553,10 @@ def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
     from pacotes import a04_iluminacao as a04
 
     from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
 
     arquivo = save_profile(_perfil(None), origem="regua")
+    antes = pathlib.Path(arquivo).read_bytes()
     nome = "Régua do brilho das luzes"
     ctx = pacotes.Contexto(state={"active_profile": nome}, mesa=[])
     ponte = _PonteDeMentira()
@@ -558,14 +564,14 @@ def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
 
     assert ponte.chamadas == [("player_led_brightness_set_detalhado", ("forte",),
                                {"uniq": MACS[2]})]
-    disco = json.loads(pathlib.Path(arquivo).read_text(encoding="utf-8"))
-    controles = disco.get("controllers") or {}
+    assert pathlib.Path(arquivo).read_bytes() == antes, "o clique mudou o perfil"
+    computador = json.loads(caminho_da_maquina().read_text(encoding="utf-8"))["computador"]
+    controles = computador.get("controles") or {}
     assert controles.get(UNIQS[2], {}).get("leds") == {"player_led_brightness": "forte"}, (
-        f"o override do P3 no disco é {controles.get(UNIQS[2])} — só o campo "
+        f"o P3 no computador é {controles.get(UNIQS[2])} — só o campo "
         f"clicado entra, para não densificar o resto")
     assert set(controles) == {UNIQS[2]}, f"o clique no P3 gravou em {sorted(controles)}"
-    assert disco["leds"]["player_led_brightness"] == "fraco", (
-        "o clique numa coluna mexeu no «Todos» do perfil")
+    assert "global" not in computador, "o clique numa coluna mexeu no «Todos»"
 
 
 def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:

@@ -268,8 +268,11 @@ def test_o_sensor_grava_pelo_daemon() -> None:
                    and no.name == "_handle_sensor_set")
     grava = {getattr(no.func, "id", getattr(no.func, "attr", ""))
              for no in ast.walk(handler) if isinstance(no, ast.Call)}
-    assert "save_profile" in grava, (
-        "o `sensor.set` do daemon deixou de gravar no perfil: o sensor que ela "
+    # Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o
+    # sensor é do computador e grava pelo dono do cartão: no `maquina.json`,
+    # ou no perfil quando ele já sobrepõe os sensores daquele controle.
+    assert grava & {"save_profile", "gravar_pelo_gesto"}, (
+        "o `sensor.set` do daemon deixou de gravar: o sensor que ela "
         "desliga voltaria ligado no próximo Salvar ou na próxima troca")
 
 

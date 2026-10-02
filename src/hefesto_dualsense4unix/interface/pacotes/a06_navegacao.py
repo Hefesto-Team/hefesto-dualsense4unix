@@ -2251,7 +2251,7 @@ def _o_que_nao_guardou(nome: str) -> str:
 
 
 def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
-    """Grava no perfil ATIVO o que ESTE clique mudou. Disco, e nada mais.
+    """Grava o que ESTE clique mudou onde a marca do cartão diz. Disco, e nada mais.
 
     Aceita `teclado_emulado=` (a lista «Função do teclado») e os dois do rato
     (`mouse_speed`, `mouse_scroll`) — ver `_DO_RATO`.
@@ -2275,27 +2275,35 @@ def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
     caso de ela arrastar a barra e voltar ao valor de origem.
     """
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        return _o_que_nao_guardou("")
     loader = perfil._com_o_src()
-    try:
-        prof = loader.load_profile(nome)
-    except Exception:
-        return _o_que_nao_guardou(nome)
+    if nome:
+        try:
+            loader.load_profile(nome)
+        except Exception:
+            return _o_que_nao_guardou(nome)
 
-    mudanca: dict[str, Any] = {}
-    if "teclado_emulado" in campos:
-        quer = bool(campos["teclado_emulado"])
-        if getattr(prof, "teclado_emulado", None) is not quer:
-            mudanca["teclado_emulado"] = quer
-    do_rato = {_DO_RATO[k]: v for k, v in campos.items() if k in _DO_RATO}
-    if do_rato:
-        secao = _secao_do_mouse(prof, ctx, do_rato)
-        if secao is not None:
-            mudanca["mouse"] = secao
-    if not mudanca:
-        return ""
-    loader.save_profile(prof.model_copy(update=mudanca), origem="interface-nova")
+    def _com_o_que_mudou(prof: Any) -> Any:
+        mudanca: dict[str, Any] = {}
+        if "teclado_emulado" in campos:
+            quer = bool(campos["teclado_emulado"])
+            if getattr(prof, "teclado_emulado", None) is not quer:
+                mudanca["teclado_emulado"] = quer
+        do_rato = {_DO_RATO[k]: v for k, v in campos.items() if k in _DO_RATO}
+        if do_rato:
+            secao = _secao_do_mouse(prof, ctx, do_rato)
+            if secao is not None:
+                mudanca["mouse"] = secao
+        return prof.model_copy(update=mudanca) if mudanca else None
+
+    # ONDE GRAVA É A MARCA DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01):
+    # o perfil, quando ele já escolheu; o computador, quando não, e sem perfil.
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    cartao = "teclado" if "teclado_emulado" in campos else "mouse"
+    try:
+        gravar_pelo_gesto(cartao, nome, _com_o_que_mudou, origem="interface-nova")
+    except (OSError, ValueError):
+        return _o_que_nao_guardou(nome)
     return ""
 
 
@@ -2678,7 +2686,7 @@ _ESCOLHA_DELA: dict[str, bool | None] = {
 _ESCOLHA: dict[str, bool | None] = _ESCOLHA_DELA
 
 
-@gesto("06-navegacao.html", "teclado", grava="save_profile")
+@gesto("06-navegacao.html", "teclado", grava="gravar_pelo_gesto")
 def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A lista "Função do teclado". `keyboard.emulation.set`.
 
@@ -2800,7 +2808,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recado} if recado else None
 
 
-@gesto("06-navegacao.html", "vel-cursor", grava="save_profile")
+@gesto("06-navegacao.html", "vel-cursor", grava="gravar_pelo_gesto")
 def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade de cursor, arrastada. `mouse_emulation.speed`.
 
@@ -2833,7 +2841,7 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     return {"recado": recado} if recado else None
 
 
-@gesto("06-navegacao.html", "vel-rolagem", grava="save_profile")
+@gesto("06-navegacao.html", "vel-rolagem", grava="gravar_pelo_gesto")
 def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade da rolagem, arrastada. `scroll_speed`.
 
@@ -3068,7 +3076,7 @@ def _de_fabrica_vira_none(atalhos: dict[str, list[str]]) -> dict[str, list[str]]
     return None if atalhos == de_fabrica else atalhos
 
 
-@gesto("06-navegacao.html", "guardar-teclas", grava="gravar_e_reaplicar")
+@gesto("06-navegacao.html", "guardar-teclas", grava="gravar_pelo_gesto")
 def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Guardar" da tela *Teclas do teclado*. `Profile.key_bindings`.
 
@@ -3097,8 +3105,12 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     ELE RECUSA DIZENDO, uma linha por vez, e nada é gravado quando alguma
     recusa: gravar sete de oito e calar sobre a oitava é o botão que responde
     calado.
+
+    ONDE GRAVA (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): as teclas são do
+    cartão «Teclado», que é do computador. Grava no perfil só quando ele já
+    tem teclas próprias; senão, no ``maquina.json``, e o perfil não muda.
     """
-    nome = _perfil_ativo_ou_recusa(ctx)
+    nome = _nome_do_ativo_ou_nada(ctx)
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError(
@@ -3128,15 +3140,25 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             "gerador com `data-campo=\"tecla-<botão>\"`; sem eles não há o que "
             "gravar.")
 
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
-    atalhos = _atalhos_de_hoje(prof)
-    for botao, tokens in escritos.items():
-        if tokens:
-            atalhos[botao] = list(tokens)
-        else:
-            atalhos.pop(botao, None)
-    novo = _de_fabrica_vira_none(atalhos)
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    perfil._com_o_src()
+    visto: dict[str, Any] = {}
+
+    def _com_as_teclas(prof: Any) -> Any:
+        atalhos = _atalhos_de_hoje(prof)
+        for botao, tokens in escritos.items():
+            if tokens:
+                atalhos[botao] = list(tokens)
+            else:
+                atalhos.pop(botao, None)
+        novo = _de_fabrica_vira_none(atalhos)
+        visto["escolhas"] = getattr(prof, "button_actions", None) or {}
+        visto["igual"] = getattr(prof, "key_bindings", None) == novo
+        if visto["igual"]:
+            return None
+        return prof.model_copy(update={"key_bindings": novo})
+
     # A COMPARAÇÃO É DIRETA, e é o Python que já separa os três estados: `None`
     # (herda), `{}` (ela esvaziou tudo) e um dicionário. `None == {}` é falso, e
     # é o que impede este ramo de confundir "herda" com "vazio" — a mesma
@@ -3147,21 +3169,23 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     # o botão que responde calado. E gravar o idêntico não é de graça — trocaria
     # a data do arquivo e faria o daemon reaplicar um perfil igual, o que um
     # `profile.switch` no meio de uma partida cobra.
-    if getattr(prof, "key_bindings", None) == novo:
+    onde, _novo = gravar_pelo_gesto("teclado", nome, _com_as_teclas,
+                                    origem="interface-nova")
+    if visto.get("igual"):
         _largar_o_que_ela_mexeu()
         raise RuntimeError(
-            f"não havia o que guardar — o perfil “{nome}” já digita exatamente "
-            "o que estes campos mostram. Está guardado. Para mudar alguma "
-            "coisa, escreva outra tecla e clique aqui de novo.")
+            f"não havia o que guardar — {_quem_guarda(onde, nome)} já digita "
+            "exatamente o que estes campos mostram. Está guardado. Para mudar "
+            "alguma coisa, escreva outra tecla e clique aqui de novo.")
     # A LISTA AO LADO PODE ESTAR MASCARANDO O QUE ELA ACABOU DE ESCREVER, e a
     # tela DIZ em vez de gravar por cima: `button_actions` é a camada de cima
     # (`acoes.tabela_efetiva`), então uma linha escolhida na tabela vence a
     # tecla escrita aqui. Apagar a escolha da tabela de carona seria desfazer,
     # em silêncio, um clique que ela deu na outra tela.
-    escolhas = getattr(prof, "button_actions", None) or {}
+    escolhas = visto.get("escolhas") or {}
     mascarados = sorted(b for b, t in escritos.items()
                         if b in escolhas and "+".join(t) != str(escolhas[b]))
-    perfil.gravar_e_reaplicar(prof.model_copy(update={"key_bindings": novo}), ctx, p)
+    perfil.reaplicar(nome, ctx, p)
     _largar_o_que_ela_mexeu()
     if mascarados:
         raise RuntimeError(
@@ -3175,7 +3199,7 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
         perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
 
 
-@gesto("06-navegacao.html", "padrao-da-tecla", grava="gravar_e_reaplicar")
+@gesto("06-navegacao.html", "padrao-da-tecla", grava="gravar_pelo_gesto")
 def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Voltar ao padrão" de **UMA** linha — o Passo 2 da sprint.
 
@@ -3204,34 +3228,48 @@ def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
         raise ValueError(
             f"padrao-da-tecla: o clique não disse qual linha (veio {botao!r}). "
             "O `data-tecla` de cada botão é o id do botão, e ele vem do gerador.")
-    nome = _perfil_ativo_ou_recusa(ctx)
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
+    nome = _nome_do_ativo_ou_nada(ctx)
+    perfil._com_o_src()
     de_fabrica = acoes.padrao()[botao].split("+")
-    atalhos = _atalhos_de_hoje(prof)
-    antes = list(atalhos.get(botao) or ())
-    atalhos[botao] = list(de_fabrica)
-    novas_teclas = _de_fabrica_vira_none(atalhos)
+    visto: dict[str, Any] = {}
 
-    escolhas = dict(getattr(prof, "button_actions", None) or {})
-    tirado = escolhas.pop(botao, None)
-    novas_escolhas = escolhas or None
+    # AS DUAS CAMADAS SÃO DE DOIS CARTÕES (a tecla é do «Teclado», a escolha
+    # da lista é do «Mouse»), e cada uma grava onde a marca do cartão dela
+    # diz: um perfil pode sobrepor uma e não a outra.
+    def _a_tecla_de_fabrica(prof: Any) -> Any:
+        atalhos = _atalhos_de_hoje(prof)
+        visto["antes"] = list(atalhos.get(botao) or ())
+        atalhos[botao] = list(de_fabrica)
+        novas_teclas = _de_fabrica_vira_none(atalhos)
+        mudou = (prof.key_bindings is None) != (novas_teclas is None) or (
+            (prof.key_bindings or {}) != (novas_teclas or {}))
+        visto["mudou_tecla"] = mudou
+        return prof.model_copy(update={"key_bindings": novas_teclas}) if mudou else None
 
-    mudou_tecla = (prof.key_bindings is None) != (novas_teclas is None) or (
-        (prof.key_bindings or {}) != (novas_teclas or {}))
-    if not mudou_tecla and tirado is None:
+    def _sem_a_escolha(prof: Any) -> Any:
+        escolhas = dict(getattr(prof, "button_actions", None) or {})
+        visto["tirado"] = escolhas.pop(botao, None)
+        if visto["tirado"] is None:
+            return None
+        return prof.model_copy(update={"button_actions": escolhas or None})
+
+    onde, _ = gravar_pelo_gesto("teclado", nome, _a_tecla_de_fabrica,
+                                origem="interface-nova")
+    gravar_pelo_gesto("mouse", nome, _sem_a_escolha, origem="interface-nova")
+    antes = visto.get("antes") or []
+    tirado = visto.get("tirado")
+    if not visto.get("mudou_tecla") and tirado is None:
         # NADA A FAZER **É UM DESFECHO, E ELE FALA** — a mesma correção de
         # 02/09/2026 que o `padrao_definicoes` carrega: um `return` seco aqui
         # seria indistinguível de um botão que mentiu.
         _MEXENDO.pop(f"{PREFIXO_DA_TECLA}{botao}", None)
         raise RuntimeError(
             f"não havia o que voltar — {_nome_do_botao(botao)} já está no de "
-            f"fábrica neste perfil (“{nome}”). Não gravei nada e não incomodei "
+            f"fábrica {_em_quem(onde, nome)}. Não gravei nada e não incomodei "
             "o serviço.")
-    perfil.gravar_e_reaplicar(
-        prof.model_copy(update={"key_bindings": novas_teclas,
-                                "button_actions": novas_escolhas}), ctx, p)
+    perfil.reaplicar(nome, ctx, p)
     _MEXENDO.pop(f"{PREFIXO_DA_TECLA}{botao}", None)
     _MEXENDO.pop(f"{PREFIXO_DA_ACAO}{botao}", None)
     saiu = []
@@ -3330,7 +3368,28 @@ def _perfil_ativo_ou_recusa(ctx: Contexto) -> str:
     return nome
 
 
-@gesto("06-navegacao.html", "guardar-definicoes", grava="gravar_e_reaplicar")
+def _nome_do_ativo_ou_nada(ctx: Contexto) -> str:
+    """O nome do perfil ativo, ou ``""``.
+
+    Para os gestos dos cartões «Mouse» e «Teclado», que são do computador
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): sem perfil ativo, eles
+    gravam no computador, e não há o que recusar. A troca de botões e o
+    Point-and-click continuam do jogo, e recusam por
+    :func:`_perfil_ativo_ou_recusa`.
+    """
+    return perfil.nome_do_ativo(ctx.state).strip()
+
+
+def _quem_guarda(onde: str, nome: str) -> str:
+    """O sujeito da frase: o perfil, quando ele sobrepõe o cartão, ou o computador."""
+    return f"o perfil “{nome}”" if onde == "jogo" and nome else "o computador"
+
+
+def _em_quem(onde: str, nome: str) -> str:
+    return f"neste perfil (“{nome}”)" if onde == "jogo" and nome else "neste computador"
+
+
+@gesto("06-navegacao.html", "guardar-definicoes", grava="gravar_pelo_gesto")
 def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Guardar" das 21 linhas de *o que cada botão faz*. `Profile.button_actions`.
 
@@ -3394,8 +3453,12 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     "Abrir o teclado na tela". Recolher isso gravava `{'l3': '__OPEN_OSK__'}` no
     perfil ATIVO — **o L3 parava de alternar** — em silêncio, bastando um clique
     para mudar qualquer OUTRA linha.
+
+    ONDE GRAVA (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): as linhas são do
+    cartão «Mouse», que é do computador. Grava no perfil só quando ele já tem
+    escolhas próprias aqui; senão, no ``maquina.json``, e o perfil não muda.
     """
-    nome = _perfil_ativo_ou_recusa(ctx)
+    nome = _nome_do_ativo_ou_nada(ctx)
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError(
@@ -3435,9 +3498,27 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # relato exatamente nos casos em que nada mais é dito.
     aviso = _frase_do_congelado(congelado) if congelado else ""
 
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    perfil._com_o_src()
     novo = diferentes or None
+    visto: dict[str, Any] = {}
+
+    def _com_as_linhas(prof: Any) -> Any:
+        visto["guardadas"] = dict(prof.button_actions or {})
+        if prof.button_actions == novo:
+            visto["desfecho"] = "igual"
+            return None
+        if novo is None and prof.button_actions and not _MEXENDO:
+            visto["desfecho"] = "trava"
+            return None
+        visto["perdidos"] = atalhos_que_param_de_valer(
+            {"key_bindings": getattr(prof, "key_bindings", None) or {},
+             "button_actions": novo})
+        return prof.model_copy(update={"button_actions": novo})
+
+    onde, _gravado = gravar_pelo_gesto("mouse", nome, _com_as_linhas,
+                                       origem="interface-nova")
     # NADA A GRAVAR **É UM DESFECHO, E ELE FALA** — 02/09/2026, corretivo. Aqui
     # havia um `return` seco, e ele era o outro lado da recusa logo abaixo: a
     # trava manda "espere a tabela se preencher e clique de novo", e o segundo
@@ -3452,7 +3533,7 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # gesto que devolve `None` não toca o DOM (`hefesto_vivo._deu_certo`), logo
     # o segundo clique era o botão que responde calado — o defeito que esta casa
     # mais persegue.
-    if prof.button_actions == novo:
+    if visto.get("desfecho") == "igual":
         guardadas = (f"nenhuma escolha sua: as {len(acoes.BOTOES)} linhas estão "
                      "no de fábrica"
                      if not novo else
@@ -3462,8 +3543,8 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # ficar presa por uma linha que ela desfez à mão.
         _largar_o_que_ela_mexeu()
         raise RuntimeError(
-            f"não havia o que guardar — o perfil “{nome}” já tem exatamente o "
-            f"que a tabela mostra ({guardadas}). Está guardado. Para mudar "
+            f"não havia o que guardar — {_quem_guarda(onde, nome)} já tem "
+            f"exatamente o que a tabela mostra ({guardadas}). Está guardado. Para mudar "
             "alguma coisa, troque a linha e clique aqui de novo; para voltar "
             "tudo ao de fábrica, use o “Voltar ao padrão” ao lado."
             + (f" E {aviso}" if aviso else ""))
@@ -3490,27 +3571,23 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # ISSO CURA A FRASE QUE ENSINAVA UM CAMINHO INEXISTENTE. A recusa mandava
     # *"espere a tabela se preencher e clique de novo"*, e trocar a linha nunca
     # chegava ao Guardar: o tique reescrevia a escolha em ≤1,5 s. Agora chega.
-    if novo is None and prof.button_actions and not _MEXENDO:
+    if visto.get("desfecho") == "trava":
         # A CONTA SAIU — A5-032, aprovada por ela em 11/09/2026. Ela dizia "as
         # 21 linhas" (ou "as 20 restantes", quando o desenho congelado tirava
         # alguma da forma), e a frase de agora não afirma número nenhum: "a
         # tela está no de fábrica" vale nos dois casos, e era só para os dois
         # caberem juntos que a conta existia.
         raise RuntimeError(
-            "não guardei: a tela está no de fábrica e o "
-            f"perfil “{nome}” guarda "
-            f"{len(prof.button_actions)} escolha(s) sua(s) — gravar isto as "
+            "não guardei: a tela está no de fábrica e "
+            f"{_quem_guarda(onde, nome)} guarda "
+            f"{len(visto['guardadas'])} escolha(s) sua(s) — gravar isto as "
             "apagaria. Espere a tabela se preencher e tente de novo."
             + (f" E {aviso}" if aviso else ""))
-    # O QUE ESTE CLIQUE VAI FAZER PARAR DE VALER, contado ANTES da gravação —
-    # 04/09/2026, e é a metade dita do defeito §3-1. Depois do
-    # `gravar_e_reaplicar` o `prof` da memória continua sendo o de antes, mas
-    # contar aqui deixa a ordem óbvia para quem ler: o recado fala do que ESTE
-    # gesto trocou, e não do estado que sobrou.
-    perdidos = atalhos_que_param_de_valer(
-        {"key_bindings": getattr(prof, "key_bindings", None) or {},
-         "button_actions": novo})
-    perfil.gravar_e_reaplicar(prof.model_copy(update={"button_actions": novo}), ctx, p)
+    # O QUE ESTE CLIQUE VAI FAZER PARAR DE VALER foi contado ANTES da gravação,
+    # dentro de `_com_as_linhas` — 04/09/2026, e é a metade dita do defeito
+    # §3-1: o recado fala do que ESTE gesto trocou, e não do estado que sobrou.
+    perdidos = visto.get("perdidos") or []
+    perfil.reaplicar(nome, ctx, p)
     # GUARDADO É O FIM DA EDIÇÃO. A partir daqui o perfil diz o que a tela diz,
     # e o tique volta a mandar na tabela — que é a outra metade de *"até guardar
     # ou sair"*.
@@ -3544,7 +3621,7 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(" ".join(recados))
 
 
-@gesto("06-navegacao.html", "padrao-definicoes", grava="gravar_e_reaplicar")
+@gesto("06-navegacao.html", "padrao-definicoes", grava="gravar_pelo_gesto")
 def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
                       p: Any) -> dict[str, Any] | None:
     """"Voltar ao padrão" das 21 linhas de *o que cada botão faz*.
@@ -3593,17 +3670,42 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
     lançou a janela, e quem clica não lê terminal. O `recado` que este gesto
     devolve nomeia quantos atalhos saíram, no cartão dela, em verde — o que
     apaga tem de dizer o que apagou.
+
+    UM DEGRAU (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): as teclas são do
+    cartão «Teclado» e as linhas, do «Mouse», os dois do computador. Cada um
+    volta onde a marca dele diz: no jogo que o sobrepõe, sai a sobreposição e
+    volta a valer o computador; sem sobreposição, o computador volta ao de
+    fábrica. Sem perfil ativo, é o computador que volta.
     """
-    nome = _perfil_ativo_ou_recusa(ctx)
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    nome = _nome_do_ativo_ou_nada(ctx)
+    perfil._com_o_src()
+    visto: dict[str, Any] = {}
+
+    def _sem_as_teclas(prof: Any) -> Any:
+        visto["atalhos"] = dict(getattr(prof, "key_bindings", None) or {})
+        if prof.key_bindings is None:
+            return None
+        visto["mudou"] = True
+        return prof.model_copy(update={"key_bindings": None})
+
+    def _sem_as_linhas(prof: Any) -> Any:
+        if prof.button_actions is None:
+            return None
+        visto["mudou"] = True
+        return prof.model_copy(update={"button_actions": None})
+
+    onde, _ = gravar_pelo_gesto("teclado", nome, _sem_as_teclas,
+                                origem="interface-nova")
+    gravar_pelo_gesto("mouse", nome, _sem_as_linhas, origem="interface-nova")
     # OS DOIS CAMPOS, e não só um — 01/09/2026, quando o `button_actions`
     # nasceu. O perfil passou a guardar o que cada botão faz em DOIS lugares:
     # o `key_bindings` (as nove teclas, da FEAT-KEYBOARD-PERSISTENCE-01) e o
     # `button_actions` (as vinte e uma linhas da tela). Um "Voltar ao padrão"
     # que zerasse só o primeiro deixaria a tabela metade de fábrica e metade
     # não — e o botão diria "de fábrica" sobre isso.
-    if prof.key_bindings is None and prof.button_actions is None:
+    if not visto.get("mudou"):
         # JÁ ESTÁ DE FÁBRICA. Gravar de novo trocaria a data do arquivo e faria
         # o daemon reaplicar um perfil idêntico — barulho sem efeito, e um
         # `profile.switch` no meio de uma partida não é de graça. **Mas não
@@ -3614,14 +3716,12 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
         # Nada é gravado e o daemon continua sem ser incomodado.
         _largar_o_que_ela_mexeu()
         raise RuntimeError(
-            f"não havia o que voltar — o perfil “{nome}” já está no de fábrica "
-            f"nas {len(acoes.BOTOES)} linhas de o que cada botão faz. Não gravei "
-            "nada e não incomodei o daemon.")
-    # O QUE ELE APAGA, contado ANTES de apagar: os atalhos que ela escreveu à
-    # mão continuam sendo os do perfil até esta linha.
-    atalhos = getattr(prof, "key_bindings", None) or {}
-    perfil.gravar_e_reaplicar(
-        prof.model_copy(update={"key_bindings": None, "button_actions": None}), ctx, p)
+            f"não havia o que voltar — {_quem_guarda(onde, nome)} já está no de "
+            f"fábrica nas {len(acoes.BOTOES)} linhas de o que cada botão faz. "
+            "Não gravei nada e não incomodei o daemon.")
+    # O QUE ELE APAGA foi contado ANTES de apagar, dentro de `_sem_as_teclas`.
+    atalhos = visto.get("atalhos") or {}
+    perfil.reaplicar(nome, ctx, p)
     # "VOLTAR AO PADRÃO" TAMBÉM É FIM DE EDIÇÃO: o perfil foi zerado, e segurar
     # escolhas pendentes por cima disso faria a tabela mostrar o contrário do
     # que o botão acabou de fazer.
@@ -3632,7 +3732,8 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
                       for b, v in sorted(atalhos.items()))
     return {"recado": (
         f"Voltei as {len(acoes.BOTOES)} linhas ao de fábrica, e com elas saíram "
-        f"{len(atalhos)} atalho(s) de teclado que este perfil guardava: "
+        f"{len(atalhos)} atalho(s) de teclado que "
+        f"{'este perfil' if onde == 'jogo' and nome else 'o computador'} guardava: "
         f"{quais}.")}
 
 

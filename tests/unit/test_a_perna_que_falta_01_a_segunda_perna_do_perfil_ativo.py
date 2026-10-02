@@ -296,8 +296,17 @@ def test_a_barra_de_motor_tambem_esperava_a_segunda_perna(
     próxima pessoa remedindo isto na barra de motor.
 
     MORDIDA: devolva o ``getattr(self.store, …)`` em `_handle_rumble_motores_set`
-    e a resposta volta a ser ``sem_perfil`` com o ``.json`` intacto.
+    e a barra vai ao computador, com o ``.json`` intacto.
+
+    O PERFIL DO DISCO SOBREPÕE A VIBRAÇÃO DO P1 desde 01/10/2026
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): a barra é do computador, e
+    só vai ao perfil quando ele já tem a vibração daquele controle. É assim que
+    a segunda perna continua sendo o que decide o perfil que grava.
     """
+    save_profile(Profile.model_validate({
+        "name": NO_DISCO, "match": {"type": "manual"},
+        "controllers": {P1_CHAVE: {"rumble": {"motor_fraco_pct": 70}}},
+    }), origem="regua")
     resposta = asyncio.run(
         _Handlers(ativo=None)._handle_rumble_motores_set(
             {"uniq": P1, "forte_pct": 40}

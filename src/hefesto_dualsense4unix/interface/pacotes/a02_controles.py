@@ -4183,7 +4183,7 @@ def _lembrar_do_som(
     mic: dict[str, Any] | None = None,
     speaker: dict[str, Any] | None = None,
 ) -> None:
-    """Grava no PERFIL ATIVO o som que ficou de pé NESTE controle.
+    """Grava o som que ficou de pé NESTE controle onde a marca do cartão diz.
 
     ESCRITOR ÚNICO DO SOM POR PEÇA nesta aba, e ser um só é a regra da casa:
     a classe de defeito que ela persegue é *"três escritores do perfil sem
@@ -4257,8 +4257,6 @@ def _lembrar_do_som(
     casamento (`BUG-FOOTER-SAVE-DROPS-SECTIONS-01`, nomeado no próprio
     `to_profile`).
     """
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-
     if not mic and not speaker:
         return
     nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
@@ -4281,11 +4279,29 @@ def _lembrar_do_som(
 
     loader = _perfil._com_o_src()
     try:
-        prof = loader.load_profile(nome)
+        loader.load_profile(nome)
     except Exception as erro:
         raise RuntimeError(
             f"o ajuste chegou ao controle, mas não consegui ler o perfil "
             f"{nome!r} para guardá-lo: {erro}") from erro
+    # ONDE GRAVA É A MARCA DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01):
+    # o perfil, quando ele já tem o som deste controle; o computador, quando não.
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    gravar_pelo_gesto("som", nome,
+                      lambda prof: _o_som_lembrado(ctx, uniq, chave, prof, mic, speaker),
+                      uniq=chave or uniq, origem="interface-nova")
+
+
+def _o_som_lembrado(ctx: Contexto, uniq: str, chave: str, prof: Any,
+                    mic: dict[str, Any] | None,
+                    speaker: dict[str, Any] | None) -> Any:
+    """O perfil com o som que ficou de pé neste controle, ou `None` (nada mudou).
+
+    O corpo de :func:`_lembrar_do_som`, que roda sobre o perfil ou sobre o que
+    vale (o perfil com o computador por baixo) — ver `gravar_pelo_gesto`.
+    """
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
     draft = DraftConfig.from_profile(prof)
     novo = draft
@@ -4315,20 +4331,19 @@ def _lembrar_do_som(
                 raise RuntimeError(SOM_SEM_VOLUME_PARA_GUARDAR)
             novo = novo.with_controller_speaker(chave, alvo)
         if novo.source_controllers == draft.source_controllers:
-            return
+            return None
         # A BORDA JULGA A CHAVE AQUI, e é por isso que o `to_profile` mora
         # DENTRO do `try`: é ele que monta o `Profile` e dispara
         # `_validate_controllers_keys`. Fora do `try`, o `path:/dev/hidraw3`
         # subia como traço cru de pydantic — medido pela régua desta cura.
-        adiante = novo.to_profile(nome, priority=prof.priority)
+        adiante = novo.to_profile(prof.name, priority=prof.priority)
     except RuntimeError:
         raise
     except Exception as erro:
         raise RuntimeError(f"{SOM_SEM_ENDERECO}{erro}") from erro
-
-    # SÓ O DISCO — ver a docstring. O aparelho já está no valor, e a próxima
-    # ativação relê o arquivo.
-    loader.save_profile(adiante, origem="interface-nova")
+    # SÓ O DISCO — ver a docstring de `_lembrar_do_som`. O aparelho já está no
+    # valor, e a próxima ativação relê o arquivo.
+    return adiante
 
 
 @gesto("02-controles.html", "mic-retorno")
@@ -4388,7 +4403,7 @@ def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "não consegui ligar o retorno do microfone deste controle")
 
 
-@gesto("02-controles.html", "mudo", grava="save_profile")
+@gesto("02-controles.html", "mudo", grava="gravar_pelo_gesto")
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O 🎙 e o ♪ — os dois botões de calar, e eles ALTERNAM o que a tela mostra.
 
@@ -4629,7 +4644,7 @@ def _dizer_a_fonte_ao_daemon(p: Any, uniq: str, fonte: str) -> None:
         p.speaker_set(uniq=uniq, fonte=fonte)
 
 
-@gesto("02-controles.html", "rota", grava="save_profile")
+@gesto("02-controles.html", "rota", grava="gravar_pelo_gesto")
 def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Onde o som do controle sai — os QUATRO botões da fileira, um gesto só.
 
@@ -5197,7 +5212,7 @@ def toque(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(TOQUE_CINZA_NO_NATIVO)
 
 
-@gesto("02-controles.html", "ganho-mic", grava="save_profile")
+@gesto("02-controles.html", "ganho-mic", grava="gravar_pelo_gesto")
 def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O deslizante do ganho de entrada — **o ato que faltava ao número**.
 
@@ -5259,7 +5274,7 @@ def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _lembrar_do_som(ctx, uniq, mic={"gain": ficou[0]})
 
 
-@gesto("02-controles.html", "volume", grava="save_profile")
+@gesto("02-controles.html", "volume", grava="gravar_pelo_gesto")
 def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Os DOIS deslizantes — o do microfone e o do alto-falante (D-08).
 

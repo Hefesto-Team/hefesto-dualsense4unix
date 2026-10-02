@@ -2024,7 +2024,7 @@ def _como_a_tela_le(mapa: Any) -> dict[str, Any]:
 def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
                     custom: float | None = None
                     ) -> tuple[Any, dict[str, Any], bool]:
-    """Grava a força DAQUELE controle no perfil ativo, e manda reaplicar.
+    """Grava a força DAQUELE controle onde a marca do cartão diz, e manda reaplicar.
 
     Devolve `(global_do_perfil, overrides_depois, mudou)`:
 
@@ -2085,11 +2085,6 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     from hefesto_dualsense4unix.app.draft_config import DraftConfig, RumbleDraft
 
     nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
-    if not nome:
-        raise RuntimeError(
-            "não há perfil ativo agora, e a força da vibração de um controle é "
-            "do PERFIL — não de todos. Escolha um perfil na aba Perfis e tente "
-            "de novo.")
     chave = _chave_no_perfil(uniq)
     if not chave:
         raise RuntimeError(
@@ -2098,38 +2093,51 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
             "aparelho.")
 
     loader = _perfil._com_o_src()
-    try:
-        prof = loader.load_profile(nome)
-    except Exception as erro:
-        raise RuntimeError(f"não consegui ler o perfil {nome!r}: {erro}") from erro
+    if nome:
+        try:
+            loader.load_profile(nome)
+        except Exception as erro:
+            raise RuntimeError(f"não consegui ler o perfil {nome!r}: {erro}") from erro
 
-    draft = DraftConfig.from_profile(prof)
-    try:
-        # `model_validate` E NÃO `model_copy`, e a razão é a FRASE, não a
-        # segurança: o `model_copy` do pydantic não valida, mas a borda de baixo
-        # (`ControllerRumbleOverride`) pega o mesmo número um passo adiante —
-        # medido com a cura arrancada, e o teste continuou verde. O que se ganha
-        # aqui é a recusa mais PERTO do valor, e por isso com o nome dele
-        # (`custom_mult`, com o `le=RUMBLE_CUSTOM_MULT_MAX` que o declara) em
-        # vez do nome de um campo interno de `Profile`.
-        pedido = RumbleDraft.model_validate(
-            {**draft.rumble.model_dump(), "policy": policy, "custom_mult": custom})
-        novo = draft.with_controller_rumble(chave, pedido)
-        if novo.source_controllers == draft.source_controllers:
-            # NADA MUDOU NO DISCO, E O TERCEIRO ITEM DIZ ISSO ALTO —
-            # VIBRA-ACESA-01, 17/09/2026. Esta guarda já existia e já SABIA do
-            # clique que não vira nada; o que ela fazia era devolver a mesma
-            # tupla do caminho que gravou, e o fato morria aqui. Quem chama
-            # ficava sem como distinguir "gravei" de "não havia o que gravar",
-            # e o desfecho era o silêncio que ela leu como defeito. Ver
-            # :func:`_aplicar_a_forca`.
-            return draft.rumble, _como_a_tela_le(draft.source_controllers), False
-        adiante = novo.to_profile(nome, priority=prof.priority)
-    except Exception as erro:
-        raise RuntimeError(
-            f"o produto recusou essa força para este controle: {erro}") from erro
-    _perfil.gravar_e_reaplicar(adiante, ctx, p)
-    return draft.rumble, _como_a_tela_le(novo.source_controllers), True
+    resultado: dict[str, Any] = {}
+
+    def _com_a_forca(prof: Any) -> Any:
+        draft = DraftConfig.from_profile(prof)
+        resultado["global"] = draft.rumble
+        try:
+            # `model_validate` E NÃO `model_copy`, e a razão é a FRASE, não a
+            # segurança: o `model_copy` do pydantic não valida, mas a borda de
+            # baixo (`ControllerRumbleOverride`) pega o mesmo número um passo
+            # adiante — medido com a cura arrancada, e o teste continuou verde.
+            # O que se ganha aqui é a recusa mais PERTO do valor, e por isso
+            # com o nome dele (`custom_mult`, com o `le=RUMBLE_CUSTOM_MULT_MAX`
+            # que o declara) em vez do nome de um campo interno de `Profile`.
+            pedido = RumbleDraft.model_validate(
+                {**draft.rumble.model_dump(), "policy": policy, "custom_mult": custom})
+            novo = draft.with_controller_rumble(chave, pedido)
+            if novo.source_controllers == draft.source_controllers:
+                # NADA MUDOU NO DISCO, E O TERCEIRO ITEM DIZ ISSO ALTO —
+                # VIBRA-ACESA-01, 17/09/2026. Quem chama distingue "gravei" de
+                # "não havia o que gravar" por ele. Ver :func:`_aplicar_a_forca`.
+                resultado["depois"] = _como_a_tela_le(draft.source_controllers)
+                resultado["mudou"] = False
+                return None
+            resultado["depois"] = _como_a_tela_le(novo.source_controllers)
+            resultado["mudou"] = True
+            return novo.to_profile(prof.name, priority=prof.priority)
+        except Exception as erro:
+            raise RuntimeError(
+                f"o produto recusou essa força para este controle: {erro}") from erro
+
+    # ONDE GRAVA É A MARCA DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01):
+    # o perfil, quando ele já tem a vibração deste controle; o computador, quando
+    # não. Sem perfil ativo, o computador.
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    gravar_pelo_gesto("vibracao", nome, _com_a_forca, uniq=chave, origem="interface-nova")
+    if resultado["mudou"]:
+        _perfil.reaplicar(nome, ctx, p)
+    return resultado["global"], resultado["depois"], resultado["mudou"]
 
 
 @gesto("05-vibracao.html", "forca", grava="_gravar_a_forca")

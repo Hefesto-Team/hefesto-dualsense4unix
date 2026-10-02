@@ -174,19 +174,35 @@ def test_o_clique_grava_no_jogo_quando_ele_ja_sobrepoe_o_cartao() -> None:
     assert P2 not in opc.o_computador().controles
 
 
-def test_a_mudanca_do_gesto_vai_inteira_ao_computador() -> None:
-    """`gravar_a_mudanca`: o gesto monta o perfil novo; só a diferença vai ao computador."""
-    antes = _perfil(controllers={P1: {"triggers": {"left": {"mode": "Off"}}}})
-    save_profile(antes)
-    antes = load_profile("Jogo X")
-    depois = Profile.model_validate({
-        **antes.model_dump(mode="json", exclude_unset=True),
-        "controllers": {P1: {"triggers": {"left": {"mode": "Off"}}},
-                        P2: {"rumble": {"motor_forte_pct": 30}}},
-    })
-    assert opc.gravar_a_mudanca("vibracao", antes, depois, uniq=P2) == opc.COMPUTADOR
-    assert opc.o_computador().controles[P2].rumble.motor_forte_pct == 30
-    assert P2 not in (load_profile("Jogo X").controllers or {})
+def test_o_gesto_roda_sobre_o_que_vale_e_so_a_diferenca_vai_ao_computador() -> None:
+    """`gravar_pelo_gesto`: o gesto de sempre, sobre a vista; o perfil não muda.
+
+    A base é o que VALE: o 0% que o computador guarda para o P2 sai pelo gesto
+    que religa, mesmo sem nada no perfil. MORDIDA: rodar o gesto sobre o perfil
+    cru deixa o 0% no computador.
+    """
+    save_profile(_perfil(controllers={P1: {"triggers": {"left": {"mode": "Off"}}}}))
+    _computador({"controles": {P2: {"leds": {"lightbar_brightness": 0.0}}}})
+    caminho_antes = load_profile("Jogo X").model_dump(mode="json")
+
+    def religar(perfil: Profile) -> Profile:
+        cru = perfil.model_dump(mode="json", exclude_unset=True)
+        controles = dict(cru.get("controllers") or {})
+        entrada = dict(controles.get(P2) or {})
+        leds = {k: v for k, v in dict(entrada.get("leds") or {}).items()
+                if k != "lightbar_brightness"}
+        leds["lightbar"] = [1, 2, 3]
+        entrada["leds"] = leds
+        controles[P2] = entrada
+        cru["controllers"] = controles
+        return Profile.model_validate(cru)
+
+    onde, _novo = opc.gravar_pelo_gesto("luz", "Jogo X", religar, uniq=P2)
+    assert onde == opc.COMPUTADOR
+    leds = opc.o_computador().controles[P2].leds
+    assert leds.lightbar == (1, 2, 3)
+    assert "lightbar_brightness" not in leds.model_fields_set
+    assert load_profile("Jogo X").model_dump(mode="json") == caminho_antes
 
 
 def test_so_neste_jogo_e_voltar_ao_do_computador() -> None:
@@ -377,3 +393,137 @@ def test_todo_leitor_le_a_vista() -> None:
                 sem_classe.append(f"{relativo}::{funcao.name}")
     assert not sem_classe, f"leitor do perfil que não lê a vista: {sem_classe}"
     assert set(LEITORES_DO_QUE_E_DO_JOGO) <= vistos, "a lista dos leitores do jogo envelheceu"
+
+
+# ---------------------------------------------------------------------------
+# Quem grava, grava pelo dono (commit 3)
+# ---------------------------------------------------------------------------
+UM = "aa:bb:cc:00:00:01"
+
+
+class _Ponte:
+    """Um daemon de papel que confirma tudo: o que se mede aqui é o disco."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[str] = []
+
+    def __getattr__(self, nome: str) -> Any:
+        def registrar(*_a: Any, **_k: Any) -> Any:
+            self.chamadas.append(nome)
+            if nome == "resultado":
+                return {"status": "ok"}
+            if nome.endswith("_detalhado"):
+                return {"status": "ok", "por_uniq": True}
+            return True
+        return registrar
+
+
+def _pacotes() -> Any:
+    import sys
+    from pathlib import Path
+
+    import hefesto_dualsense4unix
+
+    interface = str(Path(hefesto_dualsense4unix.__file__).parent / "interface")
+    if interface not in sys.path:
+        sys.path.insert(0, interface)
+    import pacotes
+    import pacotes.a02_controles
+    import pacotes.a04_iluminacao
+    import pacotes.a05_vibracao
+    import pacotes.a06_navegacao
+
+    return pacotes
+
+
+def _contexto(pac: Any, ativo: str) -> Any:
+    um = {"uniq": UM, "connected": True, "transport": "usb", "is_primary": True,
+          "inputs": {}, "audio": {"mic_mudo": False},
+          "speaker": {"volume": 100, "muted": False}}
+    return pac.Contexto(
+        state={"active_profile": ativo, "rumble_policy": "balanceado", "rumble_ff": {},
+               "mouse_emulation": {"enabled": True, "speed": 6, "scroll_speed": 1},
+               "keyboard_emulation": {"enabled": True}},
+        mesa=[{"pref": "p1", "jogador": 1, "uniq": UM, "nome": "Régua", "via": "USB",
+               "cor": "white", "transporte": "usb"}],
+        conectados=[um], estados={})
+
+
+#: Um gesto por cartão do computador: ``(cartão, página, gesto, o que ela mandou)``.
+CLIQUES: list[tuple[str, str, str, dict[str, Any]]] = [
+    ("som", "02-controles.html", "volume",
+     {"uniq": UM, "volume": "microfone", "valor": "42"}),
+    ("luz", "04-iluminacao.html", "brilho-luzes",
+     {"uniq": UM, "controle": "p1", "luzes": "forte"}),
+    ("vibracao", "05-vibracao.html", "forca", {"uniq": UM, "forca": "max"}),
+    ("mouse", "06-navegacao.html", "vel-cursor", {"valor": "11"}),
+    ("teclado", "06-navegacao.html", "guardar-teclas",
+     {"forma": {"tecla-r1": "KEY_LEFTCTRL+KEY_W"}}),
+]
+
+
+@pytest.mark.parametrize(("cartao", "aba", "gesto", "carga"), CLIQUES,
+                         ids=[c[0] for c in CLIQUES])
+def test_o_clique_basta_e_o_perfil_fica(
+    cartao: str, aba: str, gesto: str, carga: dict[str, Any]
+) -> None:
+    """Régua 6: o gesto do cartão grava no clique, sem «Salvar» nem «Aplicar».
+
+    O perfil ativo não sobrepõe o cartão: o arquivo dele fica byte a byte, e o
+    ``maquina.json`` relido do disco (o contexto descartado) guarda o clique.
+
+    MORDIDA: `onde_grava` devolver sempre o jogo reprova nos cinco cartões.
+    """
+    pac = _pacotes()
+    caminho = save_profile(_perfil("Jogo X"))
+    antes = caminho.read_bytes()
+    fn = pac.gesto_da_pagina(aba, gesto)
+    assert fn is not None, f"{aba}·{gesto} sem dono"
+    fn(_contexto(pac, "Jogo X"), dict(carga), _Ponte())
+    assert caminho.read_bytes() == antes, f"o clique em «{cartao}» mudou o perfil"
+    relido = m.carregar_maquina().computador
+    assert not opc.computador_vazio(relido), f"o clique em «{cartao}» não chegou ao computador"
+
+
+def test_o_clique_grava_no_perfil_que_sobrepoe_o_cartao() -> None:
+    """O mesmo clique, com o jogo que já escolheu a luz do P1: vai ao perfil."""
+    pac = _pacotes()
+    save_profile(_perfil("Jogo X", controllers={
+        P1: {"leds": {"player_led_brightness": "medio"}}}))  # noqa-acento: chave ASCII
+    fn = pac.gesto_da_pagina("04-iluminacao.html", "brilho-luzes")
+    fn(_contexto(pac, "Jogo X"), {"uniq": UM, "controle": "p1", "luzes": "forte"}, _Ponte())
+    assert load_profile("Jogo X").controllers[P1].leds.player_led_brightness == "forte"
+    assert opc.computador_vazio(opc.o_computador())
+
+
+def _handlers(ativo: str | None) -> Any:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+    class _H(IpcHandlersMixin):
+        def __init__(self) -> None:
+            self.store = SimpleNamespace(active_profile=ativo)  # type: ignore[assignment]
+            self.controller = SimpleNamespace(  # type: ignore[assignment]
+                describe_controllers=lambda: [{"connected": True, "uniq": UM}])
+            self.daemon = None  # type: ignore[assignment]
+
+    return _H()
+
+
+@pytest.mark.parametrize("ativo", ["Jogo X", None], ids=["com-perfil", "sem-perfil"])
+def test_o_daemon_grava_a_barra_do_motor_pelo_dono(ativo: str | None) -> None:
+    """`rumble.motores.set`: o perfil sem a vibração do P1 deixa a barra no computador.
+
+    Sem perfil ativo, também: deixou de ser «não grava».
+    MORDIDA: devolver o `save_profile` direto ao handler reprova nos dois.
+    """
+    import asyncio
+
+    caminho = save_profile(_perfil("Jogo X"))
+    antes = caminho.read_bytes()
+    h = _handlers(ativo)
+    corpo = asyncio.run(h._handle_rumble_motores_set({"uniq": UM, "forte_pct": 40}))
+    assert corpo["status"] == "ok" and corpo["onde"] == opc.COMPUTADOR, corpo
+    assert caminho.read_bytes() == antes
+    assert opc.o_computador().controles[P1].rumble.motor_forte_pct == 40

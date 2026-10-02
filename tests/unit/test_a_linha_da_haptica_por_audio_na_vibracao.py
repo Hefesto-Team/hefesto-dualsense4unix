@@ -34,6 +34,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     Profile,
 )
+from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
     BRANCO,
     _Handlers,
@@ -180,7 +181,7 @@ class TestOGesto:
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "haptica")
         assert gesto is not None
         gesto(_ctx(haptica=HAPTICA_PCT_PADRAO), {"uniq": BRANCO, "valor": "180"}, ponte)
-        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
         assert dele.rumble is not None and dele.rumble.haptica_pct == 180
 
     @pytest.mark.parametrize(("antes", "grava"), [(150, 0), (180, 0), (0, HAPTICA_PCT_PADRAO)])

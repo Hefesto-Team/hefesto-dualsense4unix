@@ -423,14 +423,20 @@ def test_o_click_que_vem_junto_do_change_nao_inverte_duas_vezes(pac, a04):
     assert p.chamadas == [], f"o `click` chegou a falar com o daemon: {p.nomes()}"
 
 
-def test_sem_perfil_ativo_o_interruptor_recusa_dizendo(pac, a04):
-    """As cores automáticas são do PERFIL, não da máquina.
+def test_sem_perfil_ativo_o_interruptor_grava_no_computador(pac, a04):
+    """As cores automáticas são do COMPUTADOR desde 01/10/2026.
 
-    `RuntimeError` é o contrato: é a única exceção que o piloto leva ao cartão
-    dela. Um `ValueError` aqui iria para o terminal de quem lançou a janela.
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01: a luz é do computador, e sem
+    perfil ativo o interruptor grava lá em vez de recusar. Até ali esta régua
+    exigia a recusa («as cores automáticas são do PERFIL»).
+
+    MORDIDA: devolver a recusa sem perfil ao `auto_cores` reprova aqui.
     """
-    with pytest.raises(RuntimeError, match="perfil"):
-        a04.auto_cores(_ctx(pac, perfil=""), _mudanca(), PonteDeMentira())
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
+    a04.auto_cores(_ctx(pac, perfil=""), _mudanca(), PonteDeMentira())
+    leds = o_computador().global_.leds
+    assert leds is not None and "auto_player_colors" in leds.model_fields_set
 
 
 def test_o_recado_do_interruptor_conta_a_consequencia(pac, a04):

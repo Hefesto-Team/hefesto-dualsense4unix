@@ -129,14 +129,19 @@ def test_o_teto_do_disco_sobrevive_ao_salvar(disco: Any) -> None:
 def test_a_barra_personalizada_grava_o_teto_com_o_degrau(disco: Any) -> None:
     """Arrastar a barra grava `custom` e o número; outro degrau tira o número."""
     from hefesto_dualsense4unix.interface.pacotes import a05_vibracao
-    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    # O QUE VALE: desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 a força
+    # de cada controle é do computador, e o perfil só sobrepõe.
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        carregar_o_que_vale,
+    )
 
     ctx = _ctx({"active_profile": "Personalizado"})
     a05_vibracao._gravar_a_forca(ctx, _Ponte(), UNIQ, "custom", custom=0.7)
-    dele = load_profile("Personalizado").controllers[UNIQ].rumble
+    dele = carregar_o_que_vale("Personalizado").controllers[UNIQ].rumble
     assert (dele.policy, dele.custom_mult) == ("custom", pytest.approx(0.7))
 
     a05_vibracao._gravar_a_forca(ctx, _Ponte(), UNIQ, "max")
-    dele = load_profile("Personalizado").controllers[UNIQ].rumble
+    dele = carregar_o_que_vale("Personalizado").controllers[UNIQ].rumble
     assert dele.policy == "max" and dele.custom_mult is None, (
         f"o degrau novo levou o teto do antigo: {dele}")

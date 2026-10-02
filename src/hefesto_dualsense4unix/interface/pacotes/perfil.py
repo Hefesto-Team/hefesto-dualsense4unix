@@ -486,15 +486,27 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     relatado em `docs/process/agentes/2026-09-06/ONDA5-07-02.md`.
     """
     loader = _com_o_src()
+    loader.save_profile(prof, origem="interface-nova")
+    reaplicar(prof.name, ctx, p, era=era)
+
+
+def reaplicar(nome: str, ctx: Any, p: Any, *, era: str = "") -> None:
+    """Manda o daemon reaplicar o perfil ``nome`` se ele for o ATIVO, e avisa o lançamento.
+
+    A metade de :func:`gravar_e_reaplicar` que não grava perfil. Quem a chama
+    sozinha é o escritor de um cartão do computador
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o clique foi ao
+    ``maquina.json``, o perfil não mudou, e o aparelho tem de receber igual.
+    """
+    _com_o_src()
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         perfil_que_esta_valendo,
     )
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
-    loader.save_profile(prof, origem="interface-nova")
     ativo_agora = perfil_que_esta_valendo(getattr(ctx, "state", None)).nome or ""
-    if ativo_agora and mesmo_slug(ativo_agora, era or prof.name):
-        p.profile_reaplicar(prof.name)
+    if ativo_agora and mesmo_slug(ativo_agora, era or nome):
+        p.profile_reaplicar(nome)
     # A ANTECIPAÇÃO DE LANÇAMENTO relê o que os jogos vão receber. Sem ela, o
     # perfil novo só chega ao jogo no próximo start do daemon.
     p.chamar("launch_env.refresh")

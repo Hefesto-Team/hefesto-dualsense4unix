@@ -114,6 +114,23 @@ def disco(monkeypatch):
 
     monkeypatch.setattr(loader, "load_profile", falso_load, raising=False)
     monkeypatch.setattr(loader, "save_profile", falso_save, raising=False)
+
+    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o
+    # «Voltar ao padrão» grava por `gravar_pelo_gesto`, um cartão de cada vez
+    # (as teclas são do «Teclado», as linhas do «Mouse»). Aqui o disco de
+    # mentira é o de um perfil que já sobrepõe os dois: o que se mede é o que o
+    # gesto grava. O onde tem régua própria, logo abaixo e em
+    # `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    def _pelo_gesto(_cartao: str, nome: str, muda: Any, **_k: Any) -> Any:
+        novo = muda(estado[nome])
+        if novo is not None:
+            estado[nome] = novo
+            loader.save_profile(novo)
+        return opc.JOGO, novo
+
+    monkeypatch.setattr(opc, "gravar_pelo_gesto", _pelo_gesto)
     return estado, gravados
 
 
@@ -210,18 +227,27 @@ def test_zera_tambem_quando_so_o_campo_novo_esta_preenchido(pac, gesto, disco) -
     assert gravados[0].button_actions is None
 
 
-def test_sem_perfil_ativo_recusa_dizendo(pac, gesto, disco) -> None:
-    """Os atalhos são do PERFIL, não da máquina. Sem perfil, não há o que zerar.
+def test_sem_perfil_ativo_quem_volta_e_o_computador(pac, gesto) -> None:
+    """Os atalhos são do COMPUTADOR desde 01/10/2026: sem perfil, ele volta.
 
-    E a recusa tem de DIZER: um botão que responde calado quando não há quem
-    atenda é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura.
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. Até ali esta régua exigia a
+    recusa («os atalhos são do PERFIL, não da máquina»). E o «já está de
+    fábrica» continua DIZENDO, agora com o computador como sujeito.
+
+    MORDIDA: devolver a recusa sem perfil ao `padrao_definicoes` reprova aqui.
     """
-    p = PonteDeMentira()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
+
+    assert gravar_o_computador({"global": {"key_bindings": {"r1": ["KEY_F11"]},
+                                           "button_actions": {"cross": "KEY_ENTER"}}})
+    gesto(_ctx(pac, ""), {}, PonteDeMentira())
+    do_global = o_computador().global_
+    assert do_global.key_bindings is None and do_global.button_actions is None
+
     with pytest.raises(RuntimeError) as erro:
-        gesto(_ctx(pac, ""), {}, p)
-    frase = str(erro.value)
-    assert "perfil" in frase.lower(), f"a recusa não nomeia o perfil: {frase!r}"
-    assert p.chamadas == [], "recusou e ainda assim falou com o daemon"
+        gesto(_ctx(pac, ""), {}, PonteDeMentira())
+    assert "o computador já está no de fábrica" in str(erro.value)
 
 
 def test_as_nove_linhas_que_o_perfil_alcanca_sao_as_do_produto() -> None:

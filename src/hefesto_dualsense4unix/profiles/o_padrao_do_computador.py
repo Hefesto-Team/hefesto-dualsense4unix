@@ -13,7 +13,7 @@ UM DONO PARA QUATRO PERGUNTAS:
   que fica no jogo e por quê;
 - :func:`perfil_que_vale`: a vista que todo leitor aplica, no molde da
   economia (``manager._perfil_na_economia``): memória, nunca disco;
-- :func:`gravar` e :func:`gravar_a_mudanca`: o único escritor de um cartão do
+- :func:`gravar` e :func:`gravar_pelo_gesto`: o único escritor de um cartão do
   computador. Grava no perfil quando ele já sobrepõe o cartão, ou quando o
   gesto é «Só neste jogo»; nos outros casos, no computador;
 - :func:`migrar_uma_vez`: o computador nasce do Freestyle, e o perfil perde só
@@ -38,7 +38,7 @@ o que foi escrito (``exclude_unset``), e ali a presença basta.
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.profiles.schema import (
@@ -165,6 +165,18 @@ def _entradas_por_chave(controles: Mapping[str, Any] | None) -> dict[str, str]:
         if normal is not None:
             saida.setdefault(normal, original)
     return saida
+
+
+def chave_no_perfil(perfil: Profile, uniq: object) -> str:
+    """A chave da entrada deste controle como o perfil a escreveu.
+
+    O perfil pode guardar o controle com dois-pontos ou colado, maiúsculo ou
+    minúsculo; quem grava a entrada mexe na que existe, e não cria uma segunda
+    para o mesmo controle. Sem entrada, a identidade (ou o próprio ``uniq``).
+    """
+    identidade = chave(uniq)
+    original = _entradas_por_chave(perfil.controllers).get(identidade or "")
+    return original or identidade or str(uniq)
 
 
 # ---------------------------------------------------------------------------
@@ -431,7 +443,10 @@ def _no_computador(campos: Mapping[str, Any], uniq: object) -> dict[str, Any]:
     documento: dict[str, Any] = dict(o_computador().model_dump(mode="json"))
     if uniq is None:
         do_global = dict(documento.get("global") or {})
-        _remendar(do_global, {s: v for s, v in campos.items() if s in _GLOBAIS_DO_COMPUTADOR})
+        _remendar(do_global, {
+            s: (_so_os_campos_do_computador(s, v) if isinstance(v, Mapping) else v)
+            for s, v in campos.items() if s in _GLOBAIS_DO_COMPUTADOR
+        })
         fora = sorted(s for s in campos if s not in _GLOBAIS_DO_COMPUTADOR)
         if fora:
             logger.info("computador_sem_lugar_para", secoes=fora)
@@ -451,6 +466,16 @@ def _no_computador(campos: Mapping[str, Any], uniq: object) -> dict[str, Any]:
     if not gravar_o_computador(documento):
         raise OSError("o maquina.json é de outra versão e não foi regravado")
     return documento
+
+
+#: As seções globais em que o computador guarda MENOS que o perfil: do mouse,
+#: só as velocidades (o liga e desliga é do jogo).
+_CAMPOS_DO_GLOBAL: dict[str, tuple[str, ...]] = {"mouse": ("speed", "scroll_speed")}
+
+
+def _so_os_campos_do_computador(secao: str, valor: Mapping[str, Any]) -> dict[str, Any]:
+    campos = _CAMPOS_DO_GLOBAL.get(secao)
+    return dict(valor) if campos is None else {c: v for c, v in valor.items() if c in campos}
 
 
 _GLOBAIS_DO_COMPUTADOR: frozenset[str] = frozenset(
@@ -547,21 +572,29 @@ def _diferenca_de_secao(secao: str, antes: Any, depois: Any) -> Any:
     return mudou
 
 
-def o_que_mudou(cartao: str, antes: Profile, depois: Profile) -> tuple[
-    dict[str, Any], dict[str, dict[str, Any]]
-]:
-    """``(globais, {identidade: seções})`` do que mudou de ``antes`` para ``depois``."""
+def o_que_mudou(
+    cartao: str, antes: Profile, depois: Profile, uniq: object = None
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """``(globais, {identidade: seções})`` do que mudou de ``antes`` para ``depois``.
+
+    Com ``uniq``, só a entrada daquele controle: o gesto de UM controle não leva
+    ao computador a forma que a gravação deu às entradas dos outros.
+    """
     secao_do_cartao = SECOES[cartao]
     globais: dict[str, Any] = {}
-    for secao in secao_do_cartao.globais:
-        mudou = _diferenca_de_secao(
-            secao, getattr(antes, secao, None), getattr(depois, secao, None))
-        if mudou is None or mudou:
-            globais[secao] = mudou
+    if uniq is None:
+        for secao in secao_do_cartao.globais:
+            mudou = _diferenca_de_secao(
+                secao, getattr(antes, secao, None), getattr(depois, secao, None))
+            if mudou is None or mudou:
+                globais[secao] = mudou
     por_controle: dict[str, dict[str, Any]] = {}
     velhos = _entradas_por_chave(antes.controllers)
     novos = _entradas_por_chave(depois.controllers)
-    for identidade in sorted(set(velhos) | set(novos)):
+    identidades = set(velhos) | set(novos)
+    if uniq is not None:
+        identidades &= {chave(uniq) or ""}
+    for identidade in sorted(identidades):
         entrada_antes = (antes.controllers or {}).get(velhos.get(identidade, ""))
         entrada_depois = (depois.controllers or {}).get(novos.get(identidade, ""))
         for secao in secao_do_cartao.por_controle:
@@ -575,34 +608,54 @@ def o_que_mudou(cartao: str, antes: Profile, depois: Profile) -> tuple[
     return globais, por_controle
 
 
-def gravar_a_mudanca(
+def perfil_vazio() -> Profile:
+    """Um perfil que não escolhe nada: a base do computador quando não há perfil ativo."""
+    return Profile.model_validate({"name": "computador", "match": {"type": "manual"}})
+
+
+def gravar_pelo_gesto(
     cartao: str,
-    antes: Profile,
-    depois: Profile,
+    nome: str,
+    muda: Callable[[Profile], Profile | None],
     *,
     uniq: object = None,
     so_neste_jogo: bool = False,
     origem: str | None = None,
-) -> str:
-    """O que o gesto mudou no perfil (``antes`` → ``depois``), gravado onde vale.
+) -> tuple[str, Profile | None]:
+    """O gesto de um cartão, gravado onde a marca do cartão diz.
 
-    Os gestos montam o perfil novo como sempre montaram. Se o perfil sobrepõe o
-    cartão, o ``depois`` vai ao disco inteiro, como antes; se não, só a
-    diferença do cartão vai ao computador, e o perfil fica como estava.
+    ``muda`` é o que o gesto sempre fez: recebe um perfil e devolve o perfil
+    com a mudança (ou ``None``, quando não há o que gravar). Se o perfil
+    ``nome`` sobrepõe o cartão, ``muda`` roda sobre ele e o resultado vai ao
+    disco inteiro, como antes. Se não, ``muda`` roda sobre a VISTA (o que vale
+    agora) e só a diferença do cartão vai ao computador; o perfil não muda.
+
+    Sem perfil ativo (``nome`` vazio), o gesto roda sobre o computador sozinho
+    e grava nele: o que é do computador não precisa de perfil.
+
+    Levanta o que ``loader.load_profile`` e ``muda`` levantarem. Devolve
+    ``(onde, perfil mudado)``.
     """
-    onde = onde_grava(cartao, antes, uniq, so_neste_jogo=so_neste_jogo)
-    if onde == JOGO:
-        from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles import loader
 
-        save_profile(depois, origem=origem or "computador-ou-jogo")
+    cru = loader.load_profile(nome) if nome else None
+    onde = onde_grava(cartao, cru, uniq, so_neste_jogo=so_neste_jogo)
+    if onde == JOGO and cru is not None:
+        novo = muda(cru)
+        if novo is not None:
+            loader.save_profile(novo, origem=origem or "computador-ou-jogo")
     else:
-        globais, por_controle = o_que_mudou(cartao, antes, depois)
-        if globais:
-            _no_computador(_com_os_pares(globais), None)
-        for identidade, secoes in por_controle.items():
-            _no_computador(_com_os_pares(secoes), identidade)
-    logger.info("cartao_gravado", cartao=cartao, onde=onde, perfil=antes.name)
-    return onde
+        vista = perfil_que_vale(cru if cru is not None else perfil_vazio(), o_computador())
+        novo = muda(vista)
+        if novo is not None:
+            globais, por_controle = o_que_mudou(cartao, vista, novo, uniq)
+            if globais:
+                _no_computador(_com_os_pares(globais), None)
+            for identidade, secoes in por_controle.items():
+                _no_computador(_com_os_pares(secoes), identidade)
+    if novo is not None:
+        logger.info("cartao_gravado", cartao=cartao, onde=onde, perfil=nome)
+    return onde, novo
 
 
 # ---------------------------------------------------------------------------
@@ -747,18 +800,20 @@ __all__ = [
     "Secao",
     "carregar_o_que_vale",
     "chave",
+    "chave_no_perfil",
     "computador_vazio",
     "e_o_freestyle",
     "escolhas_do_controle_do_jogo",
     "escolhas_globais_do_jogo",
     "gravar",
-    "gravar_a_mudanca",
+    "gravar_pelo_gesto",
     "marca",
     "o_computador",
     "o_que_mudou",
     "o_que_vale",
     "onde_grava",
     "perfil_que_vale",
+    "perfil_vazio",
     "restaurar_o_computador",
     "selo_da_maquina",
     "so_neste_jogo",

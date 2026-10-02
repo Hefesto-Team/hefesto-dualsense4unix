@@ -91,6 +91,10 @@ ESCREVEM = {
     "_gravar",                 # o helper das abas que grava a seção
     "_gravar_a_forca",         # idem, na Vibração
     "_gravar_so_o_gatilho",    # grava o perfil dela SEM reaplicá-lo
+    # O ESCRITOR DE UM CARTÃO DO COMPUTADOR — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-
+    # COM-O-JOGO-01, 01/10/2026: grava no `maquina.json` dela, ou no perfil
+    # quando ele já sobrepõe o cartão.
+    "gravar_pelo_gesto",
     # `gravar_o_modo_no_ativo` SAIU DAQUI em 29/09/2026
     # (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01), com a função: a seção `mode` do perfil
     # ativo deixou de ser escrita pela janela. Quem a grava é o daemon, depois

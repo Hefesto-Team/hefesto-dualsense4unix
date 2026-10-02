@@ -181,10 +181,23 @@ def _gesto(nome: str) -> Any:
 
 
 def _do_controle(uniq_chave: str) -> dict[str, Any]:
-    dos = _perfil_do_disco().get("controllers") or {}
-    bloco = dos.get(uniq_chave)
-    return bloco if isinstance(bloco, dict) else {}
+    """O bloco que VALE daquele controle: o do perfil por cima do do computador.
 
+    Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o som é do
+    computador: o clique grava no `maquina.json`, e no perfil só quando ele já
+    sobrepõe o cartão. A régua lê o que vale, que é o que o aparelho recebe na
+    ativação, e não um dos dois arquivos.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        carregar_o_que_vale,
+    )
+
+    try:
+        vista = carregar_o_que_vale(NOME)
+    except FileNotFoundError:
+        return {}
+    bloco = (vista.controllers or {}).get(uniq_chave)
+    return bloco.model_dump(mode="json", exclude_unset=True) if bloco is not None else {}
 
 def _bytes_do_perfil() -> bytes:
     """O arquivo CRU. `NADA MUDOU = NADA GRAVA` se mede aqui, e não por eco.
@@ -194,8 +207,14 @@ def _bytes_do_perfil() -> bytes:
     """
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
     alvo = profiles_dir() / f"{NOME.lower()}.json"
-    return alvo.read_bytes() if alvo.exists() else b""
+    # O COMPUTADOR JUNTO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o som
+    # é dele, e «nada gravou» vale para os dois arquivos.
+    maquina = caminho_da_maquina()
+    return ((alvo.read_bytes() if alvo.exists() else b"")
+            + (maquina.read_bytes() if maquina.exists() else b""))
 
 
 # ===========================================================================

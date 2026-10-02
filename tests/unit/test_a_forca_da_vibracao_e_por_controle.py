@@ -211,11 +211,17 @@ def test_a_chave_gravada_e_a_que_o_motor_casa(pac, clique_no_degrau, disco) -> N
     MORDIDA: em `a05_vibracao._chave_no_perfil`, devolva `uniq` cru em vez do
     `norm_mac` — este caso reprova com a chave `aa:bb:cc:00:00:01`.
     """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade()
     clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "max"}, PonteDeMentira())
 
-    chaves = sorted((gravados[0].controllers or {}).keys())
+    # O perfil desta régua não sobrepõe a vibração: desde 01/10/2026 o clique
+    # vai ao computador (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01), e a
+    # chave de lá é a mesma que o motor casa.
+    chaves = sorted((gravados[0].controllers or {}).keys() if gravados
+                    else o_computador().controles.keys())
     assert chaves == [CHAVE], f"gravou sob {chaves}, e o backend casa por {CHAVE!r}"
 
 
@@ -431,16 +437,21 @@ def test_a_recusa_do_degrau_e_runtime_error(pac, clique_no_degrau, clique) -> No
         clique_no_degrau(_ctx(pac), clique, PonteDeMentira())
 
 
-def test_sem_perfil_ativo_a_recusa_diz_onde_escolher(pac, clique_no_degrau) -> None:
-    """A força de um controle é do PERFIL — sem um, não há onde guardar.
+def test_sem_perfil_ativo_a_forca_vai_ao_computador(pac, clique_no_degrau) -> None:
+    """A força de um controle é do COMPUTADOR desde 01/10/2026.
 
-    MORDIDA: em `_gravar_a_forca`, tire a guarda do `active_profile` — o
-    `load_profile("")` levanta um erro de arquivo, e a frase que chega ao cartão
-    dela passa a ser um caminho de disco.
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01: sem perfil ativo, o clique
+    grava no computador em vez de recusar. Até ali esta régua exigia a recusa
+    («a força de um controle é do PERFIL»).
+
+    MORDIDA: devolver a recusa sem perfil ao `_gravar_a_forca` reprova aqui.
     """
-    with pytest.raises(RuntimeError, match=r"[Pp]erfil"):
-        clique_no_degrau(_ctx(pac, ativo=""), {"uniq": UNIQ, "forca": "max"},
-                         PonteDeMentira())
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
+    clique_no_degrau(_ctx(pac, ativo=""), {"uniq": UNIQ, "forca": "max"},
+                     PonteDeMentira())
+    rumble = o_computador().controles[CHAVE].rumble
+    assert rumble is not None and rumble.policy == "max"
 
 
 def test_a_recusa_do_arraste_sem_numero_e_runtime_error(pac, arraste) -> None:

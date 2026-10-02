@@ -672,11 +672,27 @@ def disco(monkeypatch):
     """Um disco de mentira: guarda o que o gesto mandou gravar."""
     from hefesto_dualsense4unix.profiles import loader
 
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
     gravados: list[_PerfilDeMentira] = []
     estado: dict[str, _PerfilDeMentira] = {}
     monkeypatch.setattr(loader, "load_profile", lambda n: estado[n], raising=False)
     monkeypatch.setattr(loader, "save_profile",
                         lambda prof, **_: gravados.append(prof), raising=False)
+
+    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): os gestos
+    # da tabela gravam por `gravar_pelo_gesto`, que escolhe entre o perfil e o
+    # computador. Aqui o disco de mentira é o de um perfil que já sobrepõe o
+    # cartão: o que se mede é o que o gesto grava, e não onde. O onde tem
+    # régua própria em `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
+    def _pelo_gesto(_cartao, nome, muda, **_k):
+        novo = muda(estado[nome])
+        if novo is not None:
+            estado[nome] = novo
+            loader.save_profile(novo)
+        return opc.JOGO, novo
+
+    monkeypatch.setattr(opc, "gravar_pelo_gesto", _pelo_gesto)
     return estado, gravados
 
 

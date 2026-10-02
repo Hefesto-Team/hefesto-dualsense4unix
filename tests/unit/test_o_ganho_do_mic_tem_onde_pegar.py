@@ -118,8 +118,10 @@ class TestOAtoChegaAoAparelho:
     def test_o_gesto_esta_registrado_e_chama_o_escritor(self) -> None:
         """MORDIDA: tire o decorador, ou troque a chamada por um `pass`."""
         fonte = PACOTE.read_text(encoding="utf-8")
-        assert '@gesto("02-controles.html", "ganho-mic", grava="save_profile")' in fonte, (
-            "o gesto perdeu o `grava` — o ganho volta a não viajar no perfil")
+        # O `grava` é o dono do cartão desde 01/10/2026
+        # (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o som é do computador.
+        assert '@gesto("02-controles.html", "ganho-mic", grava="gravar_pelo_gesto")' in fonte, (
+            "o gesto perdeu o `grava` — o ganho volta a não viajar no disco")
         i = fonte.index("def ganho_mic(")
         corpo = fonte[i:i + 2500]
         assert "definir_ganho_do_microfone(" in corpo, (

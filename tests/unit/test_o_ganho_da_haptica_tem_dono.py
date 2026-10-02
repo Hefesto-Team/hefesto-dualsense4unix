@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     pct_da_haptica,
 )
+from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from tests.unit import test_no_modo_xbox_a_haptica_fina as xbox
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
     BRANCO,
@@ -417,7 +418,7 @@ class TestOPedido:
 
         assert corpo["status"] == "ok" and corpo["gravado"] is True
         assert corpo["haptica_pct"] == 180
-        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
         assert dele.rumble is not None and dele.rumble.haptica_pct == 180
         assert "motor_forte_pct" not in dele.rumble.model_fields_set
         assert dono.pct(BRANCO) == 180
@@ -428,7 +429,7 @@ class TestOPedido:
         _grava_ipc(h, uniq=BRANCO, haptica_pct=0)
         corpo = _grava_ipc(h, uniq=BRANCO, haptica_pct=HAPTICA_PCT_PADRAO)
         assert corpo["haptica_pct"] == HAPTICA_PCT_PADRAO
-        dele = (loader_module.load_profile("Bancada").controllers or {}).get(BRANCO)
+        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}).get(BRANCO)
         assert dele is None or dele.rumble is None or (
             "haptica_pct" not in dele.rumble.model_fields_set
         )
@@ -438,7 +439,7 @@ class TestOPedido:
         h = _Handlers(ativo="Bancada", primario=BRANCO)
         with pytest.raises(ValueError, match="haptica_pct"):
             _grava_ipc(h, uniq=BRANCO, haptica_pct=HAPTICA_PCT_MAX + 1)
-        assert not (loader_module.load_profile("Bancada").controllers or {})
+        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
 
     def test_a_barra_dos_motores_segue_com_teto_cem(self, perfis: Path) -> None:
         save_profile(Profile(name="Bancada", match=MatchAny()))

@@ -79,6 +79,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     motores_dos_controles,
     pcts_dos_motores,
 )
+from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from tests.unit.test_backend_multi_controller import (
     KEY_1,
     KEY_2,
@@ -685,7 +686,7 @@ class TestOMetodoQueGrava:
 
         assert corpo["status"] == "ok" and corpo["gravado"] is True
         assert (corpo["forte_pct"], corpo["fraco_pct"]) == (50, 100)
-        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
         assert dele.rumble is not None
         assert dele.rumble.motor_forte_pct == 50
         assert "motor_fraco_pct" not in dele.rumble.model_fields_set, (
@@ -743,7 +744,7 @@ class TestOMetodoQueGrava:
         corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=100, fraco_pct=100)
 
         assert corpo["gravado"] is True
-        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
         assert dele.rumble is not None, "a seção morreu e levou o teto junto"
         assert dele.rumble.policy == "economia", "o degrau da peça foi apagado"
         assert dele.rumble.motor_forte_pct is None
@@ -759,7 +760,7 @@ class TestOMetodoQueGrava:
 
         _grava_ipc(h, uniq=BRANCO, forte_pct=100)
 
-        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
         assert dele.rumble is None
 
     def test_nada_mudou_nao_regrava(self, perfis: Path) -> None:
@@ -792,7 +793,7 @@ class TestOMetodoQueGrava:
         corpo = _grava_ipc(h, forte_pct=40)
 
         assert corpo["uniq"] == BRANCO
-        assert BRANCO in (loader_module.load_profile("Bancada").controllers or {})
+        assert BRANCO in (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
 
     # --- A RÉGUA SABE RECUSAR, e as quatro recusas têm razão escrita --------
 
@@ -803,11 +804,20 @@ class TestOMetodoQueGrava:
         assert corpo["status"] == "sem_controle"
         assert "POR PEÇA" in corpo["motivo"]
 
-    def test_sem_perfil_ativo_recusa_com_razao(self, perfis: Path) -> None:
+    def test_sem_perfil_ativo_grava_no_computador(self, perfis: Path) -> None:
+        """Sem perfil ativo, a barra vai ao computador (01/10/2026).
+
+        O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01: a vibração é do
+        computador. Até ali esta régua exigia o `sem_perfil` («a barra mora no
+        perfil»). MORDIDA: devolver a recusa sem perfil ao handler reprova.
+        """
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
         h = _Handlers(ativo=None, primario=BRANCO)
         corpo = _grava_ipc(h, forte_pct=50)
-        assert corpo["status"] == "sem_perfil"
-        assert "perfil" in corpo["motivo"]
+        assert corpo["status"] == "ok" and corpo["onde"] == "computador"
+        rumble = o_computador().controles[BRANCO].rumble
+        assert rumble is not None and rumble.motor_forte_pct == 50
 
     def test_endereco_sem_mac_recusa_em_vez_de_gravar_errado(
         self, perfis: Path
@@ -829,7 +839,7 @@ class TestOMetodoQueGrava:
         h = _Handlers(ativo="Bancada", primario="path:/dev/input/event9")
         corpo = _grava_ipc(h, forte_pct=50)
         assert corpo["status"] == "sem_endereco"
-        assert not (loader_module.load_profile("Bancada").controllers or {}), (
+        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}), (
             "gravou um override sob uma chave que o motor nunca casa"
         )
 
@@ -846,7 +856,7 @@ class TestOMetodoQueGrava:
         h = _Handlers(ativo="Bancada", primario=vpad)
         corpo = _grava_ipc(h, forte_pct=50)
         assert corpo["status"] == "sem_endereco"
-        assert not (loader_module.load_profile("Bancada").controllers or {})
+        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
 
     def test_sem_nenhum_dos_dois_campos_levanta(self, perfis: Path) -> None:
         h = _Handlers(ativo="Bancada", primario=BRANCO)
@@ -866,7 +876,7 @@ class TestOMetodoQueGrava:
         h = _Handlers(ativo="Bancada", primario=BRANCO)
         with pytest.raises(ValueError, match="SEGUNDO fator"):
             _grava_ipc(h, uniq=BRANCO, forte_pct=101)
-        assert not (loader_module.load_profile("Bancada").controllers or {})
+        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
 
     @pytest.mark.parametrize("valor", ["50", 50.0, True, None])
     def test_tipo_errado_levanta_antes_do_disco(self, perfis: Path, valor: Any) -> None:

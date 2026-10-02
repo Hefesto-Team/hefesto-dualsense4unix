@@ -51,6 +51,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     Profile,
 )
+from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from tests.unit.test_a_haptica_chega_a_quem_entra_depois import mesa  # noqa: F401
 from tests.unit.test_a_linha_da_haptica_por_audio_na_vibracao import (
     UNIQ,
@@ -239,7 +240,7 @@ def test_a_sensor_haptico_grava_o_ganho_no_perfil(perfis: pathlib.Path) -> None:
     gesto = pacotes.gesto_da_pagina(PAGINA, "haptica")
     assert gesto is not None
     gesto(_ctx({}), {"uniq": BRANCO, "valor": "180"}, ponte)
-    dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+    dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
     assert dele.rumble is not None and dele.rumble.haptica_pct == 180
 
 

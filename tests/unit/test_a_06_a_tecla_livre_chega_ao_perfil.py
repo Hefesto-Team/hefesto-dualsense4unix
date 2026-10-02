@@ -130,6 +130,21 @@ def bancada(monkeypatch):
 
     monkeypatch.setattr(loader, "load_profile", lambda n: disco[n], raising=False)
     monkeypatch.setattr(loader, "save_profile", _gravar, raising=False)
+
+    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): as
+    # teclas gravam por `gravar_pelo_gesto`, que escolhe entre o perfil e o
+    # computador. Aqui o disco de mentira é o de um perfil que já sobrepõe o
+    # «Teclado»: o que se mede é o que o gesto grava, e não onde. O onde tem
+    # régua própria em `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    def _pelo_gesto(_cartao, nome, muda, **_k):
+        novo = muda(disco[nome])
+        if novo is not None:
+            loader.save_profile(novo)
+        return opc.JOGO, novo
+
+    monkeypatch.setattr(opc, "gravar_pelo_gesto", _pelo_gesto)
     monkeypatch.setattr(
         perfil, "ativo",
         lambda nome: (disco[nome].model_dump() if nome in disco else {}))

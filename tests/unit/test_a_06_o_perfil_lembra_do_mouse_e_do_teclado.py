@@ -454,11 +454,39 @@ def test_a_secao_do_mouse_nasce_quando_o_perfil_nao_a_tinha(pac, a06):
 
     A MORDIDA: troque o `bool(vivo.get("enabled"))` por `False` e esta linha
     reprova.
+
+    O PERFIL SOBREPÕE O CARTÃO «MOUSE» PELOS BOTÕES desde 01/10/2026
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): a seção só nasce no perfil
+    quando o cartão é do jogo. Sem isso, a velocidade vai ao computador (a
+    régua seguinte).
     """
-    _semear("regua", com_mouse=False)
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    save_profile(Profile(name="regua", match=MatchAny(), teclado_emulado=True,
+                         button_actions={"cross": "KEY_ENTER"}), origem="regua")
     a06.vel_cursor(_ctx(pac), {"valor": "9"}, PonteDeMentira())
     d = _disco()
     assert (d["speed"], d["enabled"]) == (9, VIVO["enabled"])
+
+
+def test_sem_a_secao_e_sem_os_botoes_a_velocidade_vai_ao_computador(pac, a06):
+    """Perfil sem `mouse` e sem botões: o cartão é do computador, e o perfil fica.
+
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. O liga e desliga do mouse é
+    do jogo (`DO_JOGO`); as duas velocidades, do computador.
+
+    A MORDIDA: `onde_grava` devolver sempre o jogo faz a seção nascer no
+    perfil, e o arquivo muda.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
+    caminho = _semear("regua", com_mouse=False)
+    antes = caminho.read_bytes()
+    a06.vel_cursor(_ctx(pac), {"valor": "9"}, PonteDeMentira())
+    assert caminho.read_bytes() == antes, "a velocidade mudou o perfil"
+    mouse = o_computador().global_.mouse
+    assert mouse is not None and mouse.speed == 9
 
 
 def test_sem_o_bloco_do_daemon_a_secao_nao_nasce_chutada(pac, a06):
@@ -505,22 +533,27 @@ def test_a_barra_nao_manda_o_daemon_reaplicar_o_perfil(pac, a06, gesto, carga):
 # ---------------------------------------------------------------------------
 # 6. SEM PERFIL ATIVO: o aparelho muda, e o gesto DIZ que não guardou
 # ---------------------------------------------------------------------------
-def test_sem_perfil_ativo_o_gesto_avisa_em_vez_de_recusar(pac, a06):
-    """O canal é o de AVISO, nunca o da recusa — o mouse mudou de verdade.
+def test_sem_perfil_ativo_a_velocidade_vai_ao_computador(pac, a06):
+    """Sem perfil ativo, o mouse muda agora E fica guardado: é do computador.
 
-    Um `RuntimeError` pintaria o cartão laranja de *"não deu"* sobre um cursor
-    que acabou de ficar mais rápido. O `{"recado": …}` deposita no mesmo cartão
-    com tom de sucesso e diz a metade que faltou.
+    Até 01/10/2026 o gesto avisava «mudei agora, mas não guardei: não há
+    perfil ativo». Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 as
+    velocidades são do computador, e o que é do computador não precisa de
+    perfil. O gesto não fala: é o caminho feliz.
 
-    A MORDIDA: troque o `return {"recado": …}` por um `raise RuntimeError` e esta
-    linha reprova.
+    A MORDIDA: devolver o «não há perfil ativo» ao `_guardar_no_perfil`
+    reprova aqui.
     """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
     ponte = PonteDeMentira()
     volta = a06.vel_cursor(_ctx(pac, active_profile=""), {"valor": "11"}, ponte)
     assert "mouse.emulation.set" in ponte.metodos, (
         "o gesto nem chegou ao daemon — sem perfil ativo o ajuste ainda tem de "
-        "valer AGORA; o que falta é a memória para amanhã")
-    assert isinstance(volta, dict) and "perfil ativo" in volta.get("recado", "")
+        "valer AGORA")
+    assert volta is None, f"o caminho feliz falou: {volta!r}"
+    mouse = o_computador().global_.mouse
+    assert mouse is not None and mouse.speed == 11
 
 
 def test_com_perfil_ativo_o_gesto_nao_tem_nada_a_dizer(pac, a06):

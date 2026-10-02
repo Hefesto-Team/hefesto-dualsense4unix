@@ -490,13 +490,23 @@ def test_valor_fora_da_faixa_recusa_dizendo(pac, valor):
            PonteDeMentira())
 
 
-def test_sem_perfil_ativo_recusa_dizendo_e_nao_escreve(pac):
-    """O brilho é do PERFIL, não da máquina — e não há onde gravá-lo sem um."""
+def test_sem_perfil_ativo_o_brilho_vai_ao_computador(pac):
+    """O brilho é do COMPUTADOR desde 01/10/2026: sem perfil ativo, ele grava lá.
+
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. Até ali esta régua exigia a
+    recusa («o brilho é do perfil, não da máquina»), e a decisão por delegação
+    `D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE` a inverte: o que é do
+    computador não precisa de perfil.
+
+    MORDIDA: devolver a recusa sem perfil ao gesto `brilho` reprova aqui.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
     p = PonteDeMentira()
     fn = pac.gesto_da_pagina(PAGINA, "brilho")
-    with pytest.raises(RuntimeError, match="perfil ativo"):
-        fn(_ctx(pac, perfil=""), {"uniq": UNIQ, "valor": "40", "evento": "change"}, p)
-    assert not p.chamadas, "recusou e mesmo assim escreveu no aparelho"
+    fn(_ctx(pac, perfil=""), {"uniq": UNIQ, "valor": "40", "evento": "change"}, p)
+    leds = o_computador().controles[CHAVE].leds
+    assert leds is not None and leds.lightbar_brightness == pytest.approx(0.4)
 
 
 def test_sem_cor_conhecida_o_brilho_aplica_e_a_ressalva_fica(pac):

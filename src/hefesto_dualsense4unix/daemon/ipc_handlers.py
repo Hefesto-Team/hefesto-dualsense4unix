@@ -5890,9 +5890,9 @@ class IpcHandlersMixin:
         0,0-2,0, com a usuária levando erro de validação a partir de 101 %.
         """
         from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
-        from hefesto_dualsense4unix.profiles.loader import (
-            load_profile,
-            save_profile,
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            chave_no_perfil,
+            gravar_pelo_gesto,
         )
         from hefesto_dualsense4unix.profiles.schema import (
             HAPTICA_PCT_MAX,
@@ -5957,49 +5957,55 @@ class IpcHandlersMixin:
         # AS DUAS PERNAS — ver `_perfil_que_grava`. O store calado com um perfil
         # valendo no disco é o estado da máquina dela, e aqui ele custava a
         # barra de motor que ela acabou de arrastar.
-        nome = self._perfil_que_grava()
-        if not nome:
-            return {
-                "status": "sem_perfil",
-                "uniq": alvo,
-                "motivo": (
-                    "a barra de motor é POLÍTICA e mora no perfil; sem perfil "
-                    "ativo não há onde guardá-la. Ative um perfil e repita"
-                ),
-            }
-        perfil = load_profile(nome)
-        atuais = dict(perfil.controllers or {})
-        dele = atuais.get(chave) or ControllerOverrides()
-        antes = dele.rumble
-        # `model_fields_set` e não os valores: é ele que separa "escreveu 100"
-        # de "não escreveu", e é ele que o `exclude_unset` do save lê.
-        campos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
-        for campo, valor in pedidos.items():
-            padrao = HAPTICA_PCT_PADRAO if campo == "haptica_pct" else MOTOR_PCT_PADRAO
-            if valor == padrao:
-                campos.pop(campo, None)  # o padrão = sem opinião: a chave sai
-            else:
-                campos[campo] = valor
-        novo = ControllerRumbleOverride.model_validate(campos) if campos else None
-        antes_campos = (
-            dict(antes.model_dump(exclude_unset=True)) if antes is not None else None
-        )
-        depois_campos = dict(campos) if campos else None
-        efetivos = self._pcts_efetivos(novo)
-        haptica = pct_da_haptica(novo)
-        if antes_campos == depois_campos:
-            logger.info("rumble_motores_sem_mudanca", uniq=chave, perfil=nome)
+        #
+        # ONDE GRAVA (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): a barra é
+        # do cartão «Vibração», que é do computador. Vai ao perfil só quando
+        # ele já sobrepõe a vibração deste controle; senão, ao `maquina.json`.
+        # Sem perfil ativo, também ao computador: já não é «não grava».
+        nome = self._perfil_que_grava() or ""
+        visto: dict[str, Any] = {}
+
+        def _com_as_barras(perfil: Any) -> Any:
+            atuais = dict(perfil.controllers or {})
+            original = chave_no_perfil(perfil, chave)
+            dele = atuais.get(original) or ControllerOverrides()
+            antes = dele.rumble
+            # `model_fields_set` e não os valores: é ele que separa "escreveu
+            # 100" de "não escreveu", e é ele que o `exclude_unset` do save lê.
+            campos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
+            for campo, valor in pedidos.items():
+                padrao = HAPTICA_PCT_PADRAO if campo == "haptica_pct" else MOTOR_PCT_PADRAO
+                if valor == padrao:
+                    campos.pop(campo, None)  # o padrão = sem opinião: a chave sai
+                else:
+                    campos[campo] = valor
+            novo = ControllerRumbleOverride.model_validate(campos) if campos else None
+            visto["novo"] = novo
+            antes_campos = (
+                dict(antes.model_dump(exclude_unset=True)) if antes is not None else None
+            )
+            if antes_campos == (dict(campos) if campos else None):
+                return None
+            visto["gravado"] = True
+            atuais[original] = dele.model_copy(update={"rumble": novo})
+            return perfil.model_copy(update={"controllers": atuais})
+
+        onde, _ = gravar_pelo_gesto("vibracao", nome, _com_as_barras, uniq=chave,
+                                    origem="rumble.motores.set")
+        efetivos = self._pcts_efetivos(visto.get("novo"))
+        haptica = pct_da_haptica(visto.get("novo"))
+        if not visto.get("gravado"):
+            logger.info("rumble_motores_sem_mudanca", uniq=chave, perfil=nome, onde=onde)
             return {
                 "status": "ok",
                 "uniq": alvo,
-                "perfil": nome,
+                "perfil": nome or None,
+                "onde": onde,
                 "gravado": False,
                 "forte_pct": efetivos[0],
                 "fraco_pct": efetivos[1],
                 "haptica_pct": haptica,
             }
-        atuais[chave] = dele.model_copy(update={"rumble": novo})
-        save_profile(perfil.model_copy(update={"controllers": atuais}))
         # A LINHA QUE FAZ A BARRA VALER AGORA. Sem ela o mapa memoizado do
         # `gamepad._motores_do_perfil_ativo` continua sendo o de antes, e a
         # barra nova só entraria na próxima troca de perfil — a tela diria
@@ -6021,6 +6027,7 @@ class IpcHandlersMixin:
             "rumble_motores_gravados",
             uniq=chave,
             perfil=nome,
+            onde=onde,
             forte_pct=efetivos[0],
             fraco_pct=efetivos[1],
             haptica_pct=haptica,
@@ -6028,7 +6035,8 @@ class IpcHandlersMixin:
         return {
             "status": "ok",
             "uniq": alvo,
-            "perfil": nome,
+            "perfil": nome or None,
+            "onde": onde,
             "gravado": True,
             "forte_pct": efetivos[0],
             "fraco_pct": efetivos[1],
@@ -6128,21 +6136,23 @@ class IpcHandlersMixin:
             acelerometro=pedidos.get("acelerometro"),
         )
 
-        # (2) O PERFIL. Sem perfil ativo o interruptor ainda VALE (o registro
-        # já mudou) — só não sobrevive ao replug, e a resposta diz isso. Recusar
-        # o ato inteiro por falta de perfil seria trocar meio interruptor por
-        # nenhum.
-        nome = self._perfil_que_grava()  # as duas pernas — `_perfil_que_grava`
-        gravado = False
-        if nome:
-            from hefesto_dualsense4unix.profiles.loader import (
-                load_profile,
-                save_profile,
-            )
+        # (2) O GUARDADO. Os sensores são do cartão «Sensores», que é do
+        # computador (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): vão ao
+        # perfil só quando ele já sobrepõe os sensores deste controle; senão,
+        # ao `maquina.json`. Sem perfil ativo, também ao computador: o
+        # interruptor sobrevive ao replug do mesmo jeito.
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            chave_no_perfil,
+            gravar_pelo_gesto,
+        )
 
-            perfil = load_profile(nome)
+        nome = self._perfil_que_grava() or ""  # as duas pernas — `_perfil_que_grava`
+        visto: dict[str, Any] = {}
+
+        def _com_os_sensores(perfil: Any) -> Any:
             atuais = dict(perfil.controllers or {})
-            dele = atuais.get(chave) or ControllerOverrides()
+            original = chave_no_perfil(perfil, chave)
+            dele = atuais.get(original) or ControllerOverrides()
             antes = dele.sensores
             campos = dict(antes.model_dump(exclude_unset=True)) if antes else {}
             for campo, valor in pedidos.items():
@@ -6152,14 +6162,18 @@ class IpcHandlersMixin:
                     campos[campo] = False
             novo = ControllerSensoresOverride.model_validate(campos) if campos else None
             antes_campos = dict(antes.model_dump(exclude_unset=True)) if antes else None
-            depois_campos = dict(campos) if campos else None
-            # NADA MUDOU = NÃO REGRAVA. Um `save_profile` troca a data do
-            # arquivo e faz o daemon reaplicar o perfil; no meio de uma partida
-            # isso não é de graça. Mesma decisão de `rumble.motores.set`.
-            if antes_campos != depois_campos:
-                atuais[chave] = dele.model_copy(update={"sensores": novo})
-                save_profile(perfil.model_copy(update={"controllers": atuais}))
-                gravado = True
+            # NADA MUDOU = NÃO REGRAVA. Uma gravação troca a data do arquivo e
+            # faz o daemon reaplicar; no meio de uma partida isso não é de
+            # graça. Mesma decisão de `rumble.motores.set`.
+            if antes_campos == (dict(campos) if campos else None):
+                return None
+            visto["gravado"] = True
+            atuais[original] = dele.model_copy(update={"sensores": novo})
+            return perfil.model_copy(update={"controllers": atuais})
+
+        onde, _ = gravar_pelo_gesto("sensores", nome, _com_os_sensores, uniq=chave,
+                                    origem="sensor.set")
+        gravado = bool(visto.get("gravado"))
 
         # (3) O BRAÇO EVDEV. O hub reconcilia sozinho a cada volta de 1 s, mas
         # esperar essa volta faria a resposta descrever um grab que ainda não
@@ -6199,6 +6213,7 @@ class IpcHandlersMixin:
             "sensor_set",
             uniq=chave,
             perfil=nome,
+            onde=onde,
             gravado=gravado,
             giroscopio=estado.giroscopio,
             acelerometro=estado.acelerometro,
@@ -6208,7 +6223,8 @@ class IpcHandlersMixin:
         return {
             "status": "ok",
             "uniq": alvo,
-            "perfil": nome if isinstance(nome, str) else None,
+            "perfil": nome or None,
+            "onde": onde,
             "gravado": gravado,
             "giroscopio": estado.giroscopio,
             "acelerometro": estado.acelerometro,

@@ -105,6 +105,7 @@ diferença, é a tela que precisa contá-la.
 """
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from . import LUGAR_VAZIO, TRAVESSAO, Contexto, perfil, registrar
@@ -2837,16 +2838,12 @@ def _guardar_o_apagado_no_perfil(ctx: Contexto, uniq: str) -> None:
     mesma razão para sair calado: a barra já apagou.
     """
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        return
-    loader = perfil._com_o_src()
-    try:
-        antigo = loader.load_profile(nome)
-    except OSError:
-        return
-    novo = _com_o_brilho_gravado(antigo, uniq, 0)
-    if novo is not None:
-        loader.save_profile(novo, origem="interface-nova")
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    with contextlib.suppress(OSError):
+        gravar_pelo_gesto("luz", nome, lambda prof: _com_o_brilho_gravado(prof, uniq, 0),
+                          uniq=uniq, origem="interface-nova")
 
 
 def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
@@ -2912,19 +2909,17 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     defeito que esta função nasceu para matar.
     """
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        return
     dele = next((c for c in ctx.conectados
                  if str(c.get("uniq") or "") == uniq), None)
-    loader = perfil._com_o_src()
-    try:
-        antigo = loader.load_profile(nome)
-    except OSError:
-        return
-    novo = _com_a_cor_gravada(antigo, uniq, rgb,
-                              _numero(ctx, dele) if dele is not None else None,
-                              religar=religar)
-    loader.save_profile(novo, origem="interface-nova")
+    numero = _numero(ctx, dele) if dele is not None else None
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    with contextlib.suppress(OSError):
+        gravar_pelo_gesto(
+            "luz", nome,
+            lambda prof: _com_a_cor_gravada(prof, uniq, rgb, numero, religar=religar),
+            uniq=uniq, origem="interface-nova")
 
 
 def _a_cor_guardada(cru: dict[str, Any] | None,
@@ -3104,7 +3099,7 @@ def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
 # QUEM ACHOU FORAM DOIS AGENTES DO LOTE-0909, cada um por conta própria, e
 # nenhum portão pegou — este teste não está no `portoes.sh`. O `--rapido`
 # também não o veria; a suíte inteira o via, e a suíte roda no fim.
-@gesto("04-iluminacao.html", "cor", grava="save_profile")
+@gesto("04-iluminacao.html", "cor", grava="gravar_pelo_gesto")
 def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela clicou num tom. A cor vai AO CONTROLE NA HORA.
 
@@ -3299,7 +3294,7 @@ def _quem_e(ctx: Contexto, c: dict[str, Any]) -> str:
     return f"{numero} ({modelo})" if modelo else numero
 
 
-@gesto("04-iluminacao.html", "apagar", grava="save_profile")
+@gesto("04-iluminacao.html", "apagar", grava="gravar_pelo_gesto")
 def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Desligar": o brilho da barra vai a 0%, e a cor dela fica.
 
@@ -3331,7 +3326,7 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True, brilho=0.0)
 
 
-@gesto("04-iluminacao.html", "reenviar", grava="save_profile")
+@gesto("04-iluminacao.html", "reenviar", grava="gravar_pelo_gesto")
 def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A caixa `#RRGGBB` é o botão: a cor que está escrita vai ao controle de novo.
 
@@ -3516,7 +3511,7 @@ def _com_o_brilho_gravado(prof: Any, uniq: str, pct: int) -> Any:
     return prof.model_copy(update={"controllers": atuais})
 
 
-@gesto("04-iluminacao.html", "brilho", grava="save_profile")
+@gesto("04-iluminacao.html", "brilho", grava="gravar_pelo_gesto")
 def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela arrastou o trilho. O brilho vai AO APARELHO e AO DISCO, na hora.
 
@@ -3603,10 +3598,6 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     pct = _pct_pedido(o)
 
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        raise RuntimeError(
-            "não há perfil ativo agora, e o brilho da barra é do perfil — não "
-            "da máquina. Escolha um perfil na aba Perfis.")
 
     #: A COR PEDIDA COM O BRILHO VELHO — ver o tempo 1 da docstring. O perfil
     #: lido AQUI, antes da gravação, é o que acendeu a luz que o daemon
@@ -3618,13 +3609,14 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         raise RuntimeError(
             "este controle não está ligado agora — não há barra em que "
             "aplicar o brilho.")
-    antes = perfil.ativo(nome)
+    antes = perfil.ativo_que_vale(nome)
     recado, _base = rotulo_lightbar(dele, ctx.state)
 
-    loader = perfil._com_o_src()
-    novo = _com_o_brilho_gravado(loader.load_profile(nome), uniq, pct)
-    if novo is not None:
-        loader.save_profile(novo, origem="interface-nova")
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    gravar_pelo_gesto("luz", nome, lambda prof: _com_o_brilho_gravado(prof, uniq, pct),
+                      uniq=uniq, origem="interface-nova")
 
     # O BRILHO APLICA, NÃO JUSTIFICA A FALHA — 05/09/2026, decisão dela:
     #
@@ -3710,7 +3702,7 @@ def _com_o_brilho_das_luzes_gravado(prof: Any, uniq: str, palavra: str) -> Any:
     return prof.model_copy(update={"controllers": atuais})
 
 
-@gesto("04-iluminacao.html", GESTO_DO_BRILHO_DAS_LUZES, grava="save_profile")
+@gesto("04-iluminacao.html", GESTO_DO_BRILHO_DAS_LUZES, grava="gravar_pelo_gesto")
 def brilho_luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela clicou numa pílula da linha LEDs: Fraco, Médio ou Forte.
 
@@ -3739,14 +3731,12 @@ def brilho_luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
             f"brilho-luzes: a pílula mandou {palavra!r}, e as palavras são "
             f"{', '.join(BRILHOS_DAS_LUZES)}")
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        raise RuntimeError(
-            "não há perfil ativo agora, e o brilho das luzes é do perfil — não "
-            "da máquina. Escolha um perfil na aba Perfis.")
-    loader = perfil._com_o_src()
-    novo = _com_o_brilho_das_luzes_gravado(loader.load_profile(nome), uniq, palavra)
-    if novo is not None:
-        loader.save_profile(novo, origem="interface-nova")
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    gravar_pelo_gesto(
+        "luz", nome, lambda prof: _com_o_brilho_das_luzes_gravado(prof, uniq, palavra),
+        uniq=uniq, origem="interface-nova")
     if p.player_led_brightness_set_detalhado(palavra, uniq=uniq) is None:
         raise RuntimeError(sem_resposta_do_daemon())
     return None
@@ -3930,7 +3920,7 @@ _RECADO_DO_AUTOMATICO_VOLTOU = (
     "plástico dele, ou a do número, e duas nunca ficam iguais.")
 
 
-@gesto("04-iluminacao.html", "auto-cores", grava="gravar_e_reaplicar")
+@gesto("04-iluminacao.html", "auto-cores", grava="gravar_pelo_gesto")
 def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O interruptor do "Cores automáticas por controle" — e ele MUDA o perfil.
 
@@ -3998,29 +3988,28 @@ def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
         return None
 
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        raise RuntimeError(
-            "não há perfil ativo agora, e as cores automáticas são do perfil — "
-            "não da máquina. Escolha um perfil na aba Perfis.")
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
-    cru = perfil.ativo(nome)
+    cru = perfil.ativo_que_vale(nome)
     ligado = automatico_do_perfil(cru)
 
-    if ligado:
-        #: AS CORES PRIMEIRO, e com o automático AINDA valendo — ver a ordem na
-        #: docstring. Só os CONECTADOS: um controle que não está na mesa não tem
-        #: cor de agora a guardar, e inventar uma seria escrever no perfil dela
-        #: um valor que ninguém escolheu.
-        for c in ctx.conectados:
-            uniq = str(c.get("uniq") or "")
-            if uniq:
-                prof = _com_a_cor_gravada(
-                    prof, uniq, _a_cor_de_agora(ctx, cru, c), _numero(ctx, c))
+    def _virar(prof: Any) -> Any:
+        if ligado:
+            #: AS CORES PRIMEIRO, e com o automático AINDA valendo — ver a ordem
+            #: na docstring. Só os CONECTADOS: um controle que não está na mesa
+            #: não tem cor de agora a guardar, e inventar uma seria escrever um
+            #: valor que ninguém escolheu.
+            for c in ctx.conectados:
+                uniq = str(c.get("uniq") or "")
+                if uniq:
+                    prof = _com_a_cor_gravada(
+                        prof, uniq, _a_cor_de_agora(ctx, cru, c), _numero(ctx, c))
+        leds = prof.leds.model_copy(update={"auto_player_colors": not ligado})
+        return prof.model_copy(update={"leds": leds})
 
-    leds = prof.leds.model_copy(update={"auto_player_colors": not ligado})
-    perfil.gravar_e_reaplicar(prof.model_copy(update={"leds": leds}), ctx, p)
+    gravar_pelo_gesto("luz", nome, _virar, origem="interface-nova")
+    perfil.reaplicar(nome, ctx, p)
     return {"recado": (_RECADO_DO_AUTOMATICO_SAIU if ligado
                        else _RECADO_DO_AUTOMATICO_VOLTOU)}
 

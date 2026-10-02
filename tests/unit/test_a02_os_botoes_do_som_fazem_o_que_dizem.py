@@ -56,7 +56,6 @@ vai para um diretório temporário.
 
 from __future__ import annotations
 
-import json
 import pathlib
 import sys
 from typing import Any
@@ -233,15 +232,23 @@ def _gesto(nome: str) -> Any:
 
 
 def _do_controle(chave: str) -> dict[str, Any]:
-    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+    """O bloco que VALE daquele controle: o do perfil por cima do do computador.
 
-    alvo = profiles_dir() / f"{NOME.lower().replace('-', '_')}.json"
-    if not alvo.exists():
+    Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o som é do
+    computador: o clique grava no `maquina.json`, e no perfil só quando ele já
+    sobrepõe o cartão. A régua lê o que vale, que é o que o aparelho recebe na
+    ativação, e não um dos dois arquivos.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        carregar_o_que_vale,
+    )
+
+    try:
+        vista = carregar_o_que_vale(NOME)
+    except FileNotFoundError:
         return {}
-    dos = json.loads(alvo.read_text(encoding="utf-8")).get("controllers") or {}
-    bloco = dos.get(chave)
-    return bloco if isinstance(bloco, dict) else {}
-
+    bloco = (vista.controllers or {}).get(chave)
+    return bloco.model_dump(mode="json", exclude_unset=True) if bloco is not None else {}
 
 def _pagina_publicada() -> str:
     from hefesto_dualsense4unix.interface import onde
