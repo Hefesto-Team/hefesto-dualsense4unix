@@ -926,6 +926,39 @@ def test_o_rodape_diz_o_excluido_e_a_lista_da_steam_nao_o_repete(_aba07) -> None
     assert "Jogo tirado" in steam.fora, "o recusado DELA continua na lista"
 
 
+@pytest.mark.parametrize("lancador", ["heroic", "lutris"])
+def test_o_excluido_de_outro_cartao_tambem_sai_da_lista_da_steam(
+        _aba07, lancador: str) -> None:
+    """O jogo do Heroic ou do Lutris excluído tem a chave `steam_app_<N>` (o umu
+    batiza a janela pelo número), e a exclusão o põe no `jogos_sem_wrapper.txt`
+    como o da Steam. O filtro dos recusados só valia com uma exclusão no cartão
+    da Steam: medido no piloto, num lar de mentira, em 02/10/2026 (conferência
+    final do tema lancadores2), o cartão da Steam dizia «appid 70000 · você
+    tirou · Voltar a usar» para o jogo da GOG excluído pelo cartão do Lutris.
+
+    ARRANQUE o `steam and appids_fora` da guarda do `com_a_exclusao` e este
+    teste reprova: o «Voltar a usar» desfaria só o atalho — metade da exclusão.
+    """
+    desenho, a07 = _aba07
+    lx.adicionar(_JANELA, lancador=lancador, nome="Wo Long")
+    lida = desenho.Leitura(
+        com_wrapper=("620",), instalados=1,
+        recusados=((_APPID_WO_LONG, "Wo Long"), ("70", "Jogo tirado")))
+    cartoes = a07.com_a_exclusao(desenho.cartoes(lida), lida)
+    steam = next(c for c in cartoes if c.chave == desenho.STEAM)
+    assert "Wo Long" not in steam.fora, (
+        f"o excluído pelo cartão {lancador} aparece no da Steam: {steam.fora}")
+    assert "Jogo tirado" in steam.fora, "o recusado DELA continua na lista"
+    sem_outro = desenho.Leitura(com_wrapper=("620",), instalados=1,
+                                recusados=((_APPID_WO_LONG, "Wo Long"),))
+    vazia = next(c for c in a07.com_a_exclusao(desenho.cartoes(sem_outro), sem_outro)
+                 if c.chave == desenho.STEAM)
+    assert "Wo Long" not in vazia.fora, vazia.fora
+    assert vazia.fora == desenho.lista_de_jogos(
+        desenho.Leitura(com_wrapper=("620",), instalados=1)), (
+        "sem outro recusado, o cartão da Steam fica como o de nenhum")
+
+
 def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
         _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
     """D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS: um gravador, dois caminhos de

@@ -1104,17 +1104,17 @@ def com_a_exclusao(
                     if "atalho" in e.escritas) if a}
     saida: list[desenho.Lancador] = []
     for lanc in lancadores:
+        steam = lanc.chave == desenho.STEAM and lida is not None  # e o excluído de outro cartão
         if (not any(a.gesto == desenho.EXCLUIR for a in lanc.acoes)
-                or not por_cartao.get(lanc.chave)):
+                or not (por_cartao.get(lanc.chave) or (steam and appids_fora))):
             saida.append(lanc)
             continue
-        rodape = desenho.rodape_da_exclusao_html(por_cartao.get(lanc.chave, []))
-        fora = rodape
-        if lanc.chave == desenho.STEAM and lida is not None:
+        fora = rodape = desenho.rodape_da_exclusao_html(por_cartao.get(lanc.chave, []))
+        if steam and lida is not None:
             filtrada = dataclasses.replace(
                 lida, recusados=tuple(r for r in lida.recusados if r[0] not in appids_fora))
             lista = desenho.lista_de_jogos(filtrada)
-            if desenho.LISTA_VAZIA not in lista and lista.strip():
+            if (desenho.LISTA_VAZIA not in lista and lista.strip()) or not rodape:
                 fora = lista + rodape
         saida.append(dataclasses.replace(lanc, fora=fora, tem_lista=True))
     return saida
