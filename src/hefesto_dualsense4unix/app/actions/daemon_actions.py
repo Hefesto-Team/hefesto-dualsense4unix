@@ -1442,18 +1442,18 @@ class DaemonActionsMixin(WidgetAccessMixin):
     #: numa das duas. Quem consome a outra ponta é
     #: `interface/pacotes/a09_sistema.aplicar_aos_jogos`.
     _STEAM_APPLY_CORPO = (
-        # O ATO DE HOJE (A-PERGUNTA-DO-APLICAR-DIZ-TODO-LANCADOR-01, 02/10/2026):
-        # os outros lançadores recebem primeiro, sem fechar nada, e a Steam
-        # depois; o backup é só da Steam, e a carona anota o que escreveu
-        # (`cura_por_estrada.caminho_do_registro`). Por delegação, a validar; na língua da tela.
+        # O ATO DE HOJE (A-PERGUNTA-DO-APLICAR-DIZ-TODO-LANCADOR-01, 02/10/2026): os outros
+        # lançadores primeiro, sem fechar nada, e a Steam depois. Neles vale ao abrir de novo: o
+        # Heroic 2.22.3 guarda o config.json na memória (`getSettings`), e a caixa do Flatpak
+        # vale no `flatpak run`. Backup só na Steam (`caminho_do_registro`). A validar por ela.
         "O Hefesto entra nos jogos da Steam, do Heroic, do Lutris e dos emuladores. "
         "As opções que você já tem nos jogos são preservadas: na Steam fica um "
         "backup ao lado de cada arquivo, e nos outros eu anoto o que pus, para "
         "tirar quando o Hefesto for desinstalado.\n\n"
-        "Nos outros lançadores vale na hora, sem fechar nada. A Steam só aceita "
-        "fechada: se ela estiver aberta eu peço a sua permissão antes de fechá-la "
-        "por uns 20 segundos e abro de novo em seguida. Com um jogo aberto, a "
-        "Steam fica para depois."
+        "Nos outros lançadores eu escrevo na hora, sem fechar nada, e vale na "
+        "próxima vez que cada um abrir. A Steam só aceita fechada: se ela estiver "
+        "aberta eu peço a sua permissão antes de fechá-la por uns 20 segundos e "
+        "abro de novo em seguida. Com um jogo aberto, a Steam fica para depois."
     )
 
     def _build_steam_apply_confirm_dialog(self) -> Gtk.MessageDialog:

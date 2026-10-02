@@ -9,14 +9,17 @@ palavra (`DaemonActionsMixin._STEAM_APPLY_CORPO`), falava só da Steam e
 prometia *«Com um jogo aberto eu não mexo em nada»* — com um jogo aberto, a
 carona já tinha escrito nos outros quando a Steam recusava.
 
-AS QUATRO RÉGUAS, e nenhuma digita a lista de lançadores: o que a pergunta
+AS RÉGUAS, e nenhuma digita a lista de lançadores: o que a pergunta
 tem de nomear sai do que a carona ESCREVEU num lar de mentira.
 
 1. a pergunta nomeia cada lançador que o ato escreve;
 2. com um jogo aberto (a Steam recusa), a pergunta não promete «nada»;
 3. o contrato de dono do gesto (`gui/aba_sistema.GESTOS`) cita a carona e
    não diz «só a Steam»;
-4. o backup só se promete onde ele existe.
+4. o backup só se promete onde ele existe;
+5. a pergunta fala a língua da tela;
+6. nos outros lançadores, a pergunta não promete «na hora»: o lançador aberto
+   só lê o que a carona escreveu quando abrir de novo.
 
 TUDO NUM LAR DE MENTIRA: o `HOME` e os `XDG_*` de cada teste. A Steam é dublê
 no ponto em que o motor a fecharia (`with_steam_closed`), e o dublê sabe
@@ -282,3 +285,38 @@ def test_a_pergunta_fala_a_lingua_da_tela() -> None:
     pergunta = " ".join(a09._pergunta_da_steam().split())
     em_ingles = [p for p in ("launcher", "uninstall") if p in pergunta.casefold()]
     assert not em_ingles, f"a pergunta diz {em_ingles} na tela:\n{pergunta}"
+
+
+# ---------------------------------------------------------------------------
+# 6 · Nos outros lançadores, a pergunta não promete «na hora»
+# ---------------------------------------------------------------------------
+#: QUANDO CADA ESTRADA DA CARONA CHEGA AO JOGO, lido no leitor de cada uma
+#: (conferência final, 02/10/2026): o Heroic 2.22.3 lê o `config.json` uma vez,
+#: ao abrir (`GlobalConfigV0.getSettings` devolve o `this.config` guardado na
+#: memória, lido no `app.asar` instalado nela), e a caixa do Flatpak só entra no
+#: lançador no `flatpak run` dele. Nenhuma das duas chega a um lançador que já
+#: está aberto: o que a carona escreve vale na próxima vez que cada um abrir.
+_LIDA_AO_ABRIR = {
+    "heroic": "o Heroic lê o config.json ao abrir (GlobalConfigV0.getSettings)",
+    "caixa": "a caixa do Flatpak vale no `flatpak run` do lançador",
+}
+
+
+def test_nos_outros_lancadores_a_pergunta_nao_promete_na_hora(_lar: Path) -> None:
+    """A carona escreve agora, e o lançador aberto só lê ao abrir de novo.
+
+    MORDIDA: o corpo com «Nos outros lançadores vale na hora, sem fechar nada»
+    (conferência de UI/UX de 02/10); a régua reprova citando a frase.
+    """
+    _montar(_lar)
+    escritos = cpe.curar_todas_as_estradas()
+    estradas = {"heroic" if c == "heroic" else "caixa" for c in escritos}
+    assert estradas == set(_LIDA_AO_ABRIR), (
+        f"o lar de mentira não montou as duas estradas da carona: {escritos}")
+    pergunta = _pergunta()
+    culpadas = [f for f in _frases(pergunta)
+                if "lançadores" in f and "vale" in f and "abrir" not in f]
+    assert not culpadas, (
+        "a carona escreve no Heroic e nas caixas do Flatpak, que o lançador lê só "
+        f"ao abrir ({'; '.join(_LIDA_AO_ABRIR.values())}), e a pergunta promete "
+        f"que vale antes disso: {culpadas}")
