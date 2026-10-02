@@ -665,14 +665,31 @@ def test_o_ps_sozinho_so_abre_a_steam_sem_jogo_e_com_o_sexto_na_steam(
 
 
 @pytest.mark.parametrize("gesto", list(ag.GESTOS))
-def test_o_nada_cala_os_seis(atendentes: dict[str, list[Any]], gesto: str) -> None:
-    """O «— Nada —» vale nos seis gestos (a §14, dela): nenhum atendente é chamado."""
+def test_o_nada_cala_os_seis(atendentes: dict[str, list[Any]], gesto: str,
+                             monkeypatch: pytest.MonkeyPatch) -> None:
+    """O «— Nada —» vale nos seis gestos (a §14, dela): nenhum atendente é chamado.
+
+    E ele não chega ao fio dos atos de fora: um token que chegasse lá sem
+    atendente também não chamaria ninguém, e o diário diria
+    ``gesto_sem_atendente`` sobre a escolha dela. Medido na conferência de
+    02/10/2026: sem a linha do «— Nada —» no despachante, a régua de antes
+    passava. MORDIDA: tirar o ``nada`` do ``_AtosDoGesto.fazer`` reprova.
+    """
+    no_fio: list[str] = []
+    original = hotkey._AtosDoGesto._fio
+
+    def _anotar(self: Any, g: str) -> Any:
+        no_fio.append(g)
+        return original(self, g)
+
+    monkeypatch.setattr(hotkey._AtosDoGesto, "_fio", _anotar)
     d = _daemon({gesto: {"faz": "nada"}})
     hotkey.start_hotkey_manager(d)
     mgr = d._hotkey_manager
     _apertar(mgr, ag.GESTOS[gesto].botoes)
     assert mgr.on_ps_solo.esperar(5.0)
     assert atendentes["chamou"] == [] and d.chamados == []
+    assert no_fio == [], f"o «— Nada —» de {gesto} foi ao fio dos atos de fora"
 
 
 def test_o_sexto_que_nao_e_a_steam_vai_ao_laco_com_quem_fez(
