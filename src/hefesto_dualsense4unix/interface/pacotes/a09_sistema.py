@@ -2408,12 +2408,12 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O QUE ELE FAZ DE VERDADE, medido no fonte do daemon em 05/09/2026, e é
     MENOS do que "recarregar a configuração" dá a entender: o clique manda
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
-    (`daemon/ipc_handlers.py:6232`) e `new_cfg = replace(self.daemon.config)` é
-    uma cópia de valor igual (`:6244`). Os dois ramos que reaplicariam mouse e
-    teclado comparam `old` com `new` (`daemon/lifecycle.py:2062` e `:2070`) e
-    **nunca disparam** — o registro sai com `keys_changed=[]` (`:1925-1929`).
-    Duas coisas acontecem, e são estas: `lifecycle.py:1910-1911` derruba e sobe
-    o leitor dos atalhos do controle, e `ipc_handlers.py:6286` reescreve os
+    (`daemon/ipc_handlers.py:6280`) e `new_cfg = replace(self.daemon.config)` é
+    uma cópia de valor igual (`:6292`). Os dois ramos que reaplicariam mouse e
+    teclado comparam `old` com `new` (`daemon/lifecycle.py:2081` e `:2089`) e
+    **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
+    Duas coisas acontecem, e são estas: `lifecycle.py:2079-2080` derruba e sobe
+    o leitor dos atalhos do controle, e `ipc_handlers.py:6302` reescreve os
     arquivos de ambiente que a Steam usa. **A dica da aba diz essas duas**
     (`interface/aba09.py`, da `ONDA5-09-01`), e esta é a medição que a sustenta.
 
@@ -2474,7 +2474,7 @@ def _teto_do_perfil(escolha: str) -> str | None:
     `eu_escolho` grava `None` — a AUSÊNCIA de teto de mesa.
 
     **O `None` não é "não mandar a chave", e a diferença decide o botão.** O
-    `fundir_declaracao` (`utils/maquina.py:1409`) documenta as duas: *"`None`
+    `fundir_declaracao` (`utils/maquina.py:1631`) documenta as duas: *"`None`
     presente na declaração é uma escolha e SOBRESCREVE. Só a AUSÊNCIA da chave
     preserva o que havia."* Omitir a chave no "Eu escolho" deixaria o teto
     antigo em disco com o botão aceso dizendo que não há teto.
@@ -2532,7 +2532,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:7612`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:7628`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:147`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no

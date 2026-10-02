@@ -3637,10 +3637,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # O QUE TEM DONO, medido nos 39 métodos do `ipc_server` em 01/09/2026:
 #
-#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:6533)
-#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:6279)
-#   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :6324
-#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7580)
+#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:6581)
+#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:6327)
+#   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :6372
+#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7628)
 #
 # O "VIRTUAL / NATIVO" GANHOU DONO EM 01/09/2026, E A AFIRMAÇÃO ANTERIOR CAIU.
 # Aqui estava escrito, e é uma frase minha, da primeira leva:
@@ -4235,7 +4235,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:460`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:461`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
@@ -4415,7 +4415,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     FIRMWARE (camada 3, `ipc_handlers.py:6561`): é o único que apaga a luz
     vermelha do plástico, e a partir dele o botão físico do controle deixa de
     valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
-    ao alto-falante guardando o volume preferido (`ipc_handlers.py:6279`).
+    ao alto-falante guardando o volume preferido (`ipc_handlers._handle_speaker_set`).
     Trocar um pelo outro calaria a coisa errada.
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
@@ -4525,7 +4525,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
         # `mic.volume.set` (`daemon/ipc_handlers.py:6962`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
-        # (`daemon/subsystems/hotkey.py:1620`), e lá o campo não existe. Então
+        # (`daemon/subsystems/hotkey.py:1660`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
         # daemon de hoje, e o silêncio é o certo: quem cobre o alvo errado
         # neste caminho é a metade do CANAL, que recusa dizendo quando a
@@ -5342,7 +5342,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # colapsa isso no mesmo `True` de um pedido honrado, e a tela pintava
         # o selo do card certo sobre um número que aquele controle nunca teve.
         #
-        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:6559`) e a
+        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:7045`) e a
         # janela ANTIGA já o lê (`controller_card:4443`). Quem não lia era esta.
         corpo = _corpo(p.mic_volume_set_detalhado(pedido, uniq=uniq))
         # `sem_fonte` TEM FRASE PRÓPRIA, e SÓ ele: os outros `status` continuam
