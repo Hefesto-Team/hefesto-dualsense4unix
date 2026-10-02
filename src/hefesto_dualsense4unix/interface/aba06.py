@@ -1451,33 +1451,9 @@ REALCE = "\n".join(
 CSS += "\n  /* ---- o desenho acompanha o combo apontado, sem uma linha de script ---- */\n"
 CSS += REALCE + "\n"
 
-# ---------------------------------------------------------------------------
-# A PORTA PARA O BANCO DE PROVAS — `.porta`, 29/08/2026.
-#
-# DEFEITO MEDIDO: `mapa-do-controle.html` tem 1309 linhas, gerador próprio
-# (`_ferramentas/mapa.py`) e DOIS portões que o medem
-# (`scripts/check_pecas_do_dualsense.py`, `scripts/check_cores_do_dualsense.py`)
-# — e `grep -c 'mapa-do-controle' layout/??-*.html` devolve **0 nas dez
-# abas**. Só se chega nele digitando o caminho. É a fonte da verdade das 28
-# peças, e as 21 linhas das duas telas de botões desta aba saem do MESMO
-# `docs/data/pecas-do-dualsense.csv` que ele publica.
-#
-# A porta é `margin-left:auto` no `.quadro-topo`, que é o mesmo lugar e o mesmo
-# empurrão do `.sensores` da aba Controles — não é padrão novo.
-#
-# A ALTURA É TRAVADA EM 17px, e o número é medido: o `.quadro-topo` é
-# `align-items:center`, então a altura dele é a do filho mais alto, e o
-# `.quadro-titulo` mede **17px**. A primeira volta desta porta era uma pastilha
-# com borda, `height:19px` — dois pixels a mais que o título —, e o quadro
-# inteiro desceu: 663 das 733 caixas da aba mudaram de lugar, todas por 2px.
-# Sem borda e sem preenchimento, a porta é um link de texto com o mesmo
-# line-height do título, e a medição de antes e depois volta a bater caixa a
-# caixa. Um `.btn` da casa (34px) empurraria 17.
-CSS += """
-  .porta{margin-left:auto;font-size:11px;line-height:17px;height:17px;
-    color:var(--texto-mudo);text-decoration:none;white-space:nowrap}
-  .porta:hover{color:var(--cyan);text-decoration:underline}
-"""
+# A PORTA PARA O MAPA DO CONTROLE (`.porta`, no `.quadro-topo`) existiu de 29/08
+# a 29/09/2026 e saiu por ordem dela, «Sai também» (O-MAPA-DO-CONTROLE-MORA-SO-
+# NA-CONEXOES-01): o mapa se abre só pela aba Conexões.
 
 
 # ---------------------------------------------------------------------------
@@ -2861,7 +2837,6 @@ MIOLO = f'''
           "<br><br><b>Combinações:</b> junte teclas com &quot;+&quot; (ex.: Alt + Tab). Nenhum "
           "atalho digita letra: para escrever texto, abra o teclado na tela "
           "com o <b>L3</b>.")}
-        <a class="porta" href="mapa-do-controle.html" title="As {len(PECAS)} peças do controle, com nome e cor de fábrica, para ver clicando.">Mapa do controle&nbsp;↗</a>
       </div>
       <div class="quadro-corpo">
 
