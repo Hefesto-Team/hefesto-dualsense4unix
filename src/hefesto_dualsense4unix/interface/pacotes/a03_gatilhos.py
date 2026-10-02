@@ -1436,7 +1436,7 @@ def _na_lingua_da_tela(motivo: str, modo: str) -> str:
     """A recusa do daemon na língua dos rótulos desta aba. Sem dono novo.
 
     O TRADUTOR JÁ EXISTIA E NINGUÉM O CHAMAVA. `triggers_actions.
-    humanizar_erro_gatilho` (`app/actions/triggers_actions.py:50`) é a HARM-19,
+    humanizar_erro_gatilho` (`app/actions/triggers_actions.py`) é a HARM-19,
     escrita e testada para a aba Gatilhos da GUI estável: o daemon fala a língua
     do `core/trigger_effects` — *"end (3) deve ser > start (5)"* — e ela devolve
     *"Fim (3) precisa ser maior que Início (5)"*, com os MESMOS rótulos que o
@@ -1567,7 +1567,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     E ELA É O CHOKE POINT DO RASCUNHO — 03/09/2026. Toda escrita no gatilho
     passa por aqui, então é aqui que a tela aprende o que foi aplicado. É o
     lugar da GTK: `_persist_params_to_draft` é chamado ANTES de todo envio
-    (`triggers_actions.py:492`), pela mesma razão — quatro chamadores gravando
+    (`triggers_actions.py`), pela mesma razão — quatro chamadores gravando
     o draft por conta própria seria o quarto que esquece.
 
     O RASCUNHO SÓ RECEBE O QUE O DAEMON ACEITOU. Guardar antes faria a tela

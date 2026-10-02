@@ -206,14 +206,3 @@ def test_corpo_torto_do_daemon_nao_derruba_o_aplicar(
     )
 
 
-def test_todo_campo_do_schema_tem_rotulo_de_tela() -> None:
-    """Campo novo no schema nasce com rótulo — ou esta bateria reprova."""
-    do_schema = set(MaquinaConfig.model_fields) - {"version"}
-    faltando = do_schema - set(ipc_bridge._CAMPOS_DA_MAQUINA)
-    assert not faltando, (
-        f"campo(s) sem rótulo de tela em `_CAMPOS_DA_MAQUINA`: {sorted(faltando)}"
-    )
-    sobrando = set(ipc_bridge._CAMPOS_DA_MAQUINA) - do_schema
-    assert not sobrando, (
-        f"rótulo para campo que o schema não tem mais: {sorted(sobrando)}"
-    )

@@ -319,7 +319,9 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
         onde = f"{CSV.name}:{n}  [{l['aba']}] {l['feature'][:64]}"
         gtk, html = enderecos(l["gtk_onde"]), enderecos(l["html_onde"])
 
-        for coluna, lista, esperado in (("gtk_onde", gtk, "gtk"), ("html_onde", html, "html")):
+        # O lado GTK é registro desde 02/10/2026: a sobra da janela saiu do pacote, e
+        # `gtk_onde` diz onde a capacidade morava, não onde ela abre hoje.
+        for coluna, lista, esperado in (("html_onde", html, "html"),):
             for e in lista:
                 caminho, _, numero = e.partition(":")
                 p = RAIZ / caminho
@@ -388,12 +390,6 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
                     f"    o sinal {sinal!r} APARECEU em {achado.relative_to(RAIZ)}.\n"
                     "    O CSV diz FALTA_NO_HTML e o lado HTML passou a ter o símbolo.\n"
                     "    Se a dívida fechou, o veredito desta linha mudou: meça-a de novo e reescreva-a.")
-            elif not ENDERECO_DE_TELA.fullmatch(sinal) and arvore.ocorre(sinal, arvore.gtk) is None:
-                falhas.append(
-                    f"sinal-morto: {onde}\n"
-                    f"    o sinal {sinal!r} não existe no lado GTK e não tem forma de\n"
-                    "    endereço de tela (data-algo=\"valor\"): ninguém vai escrevê-lo,\n"
-                    "    então esta linha nunca morderia.")
     return falhas
 
 

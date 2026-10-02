@@ -136,17 +136,6 @@ class TestAPausaChegaNaPrimeiraAba:
         assert home_actions.texto_da_pausa(None) is None
 
 
-    def test_a_pausa_do_produto_e_lida_do_mesmo_campo_da_aba_emulacao(
-        self,
-    ) -> None:
-        """Uma fonte só. Duas leituras do mesmo fato não podem discordar."""
-        fonte = (
-            RAIZ / "src/hefesto_dualsense4unix/app/actions/emulation_actions.py"
-        ).read_text(encoding="utf-8")
-        assert 'state.get("paused")' in fonte
-        assert home_actions.texto_da_pausa({"paused": True}) is not None
-
-
 class TestAPonteNaoAcendeSobreMesaVazia:
     def test_o_payload_medido_nao_produz_verde(self) -> None:
         """A MORDIDA da I6, literal do §5: o payload do §2.1 não pode sair verde."""

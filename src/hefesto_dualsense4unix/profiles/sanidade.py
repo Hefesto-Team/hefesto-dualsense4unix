@@ -312,7 +312,7 @@ def verificar_perfis_do_disco() -> list[Achado]:
     um traceback na cara de quem foi justamente pedir diagnóstico. Seria piorar
     o produto para fechar uma lápide.
     Ela fica de pé como atalho de teste (é assim que
-    `test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py:177` a usa) — e
+    `test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py` a usa) — e
     quem precisar da corrente em produção usa as duas metades separadas, como o
     doctor usa.
 

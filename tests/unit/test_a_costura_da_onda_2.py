@@ -197,16 +197,6 @@ _OS_QUE_PODEM = {
         "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
         "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
     ),
-    # fica: o contador da calibração conta passos, não nomeia uma entrada
-    ("interface/calibracao_das_entradas.py", "tem um modelo de .format"): (
-        "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
-        "entrada; e `app/widgets/` está fora da posse da O-MAPA-QUE-ELA-CORRIGE-01"
-    ),
-    # sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
-    ("app/actions/config/secao_mesa.py", "tem um modelo de .format"): (
-        "a dica de procedência da seção GTK («está na entrada {numero}»), fora da "
-        "posse da O-MAPA-QUE-ELA-CORRIGE-01 — dívida declarada no relatório dela"
-    ),
     ("integrations/arranjo_da_mesa.py", "compõe uma f-string"): (
         "o porte do motor medido contra o ouro (`tests/fixtures/motor_do_arranjo_"
         "do_mockup.js`); a página do mapa tem o motor dela, que já pergunta ao "

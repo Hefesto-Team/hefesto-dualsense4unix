@@ -236,7 +236,7 @@ no de estranhos. Sem ele o id vira
 ``source-output-by-application-id:br.dev.hefesto.luz_do_mic``, que é só nosso.
 
 **O QUE ESTE CRIVO NÃO ALCANÇA, e é dívida declarada:** o outro ``parec`` desta
-casa. `app/mic_monitor.py:506` (`_abrir_captura`) abre um ``parec`` CRU, que
+casa. `app/mic_monitor.py:485` (`_abrir_captura`) abre um ``parec`` CRU, que
 aparece como ``application.name = "parec"`` — indistinguível do ``parec`` de
 qualquer outro programa. Com a janela aberta na aba Status, a PEÇA A vê aquele
 fluxo como ouvinte. A cura é de uma linha (acrescentar as mesmas propriedades

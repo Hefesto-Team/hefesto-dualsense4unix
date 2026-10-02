@@ -671,7 +671,9 @@ def valida_abas_promovidas(raiz: Path) -> list[str]:
 
 # atrasada.  <!-- noqa-acento: citação literal dela -->
 
-PISO_DA_REGUA: dict[str, int] = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 0}
+# `falas` é 0: a única `Fala` da tela era a dica da cor no rádio do cartão GTK,
+# que saiu do pacote com a janela GTK; a interface nova não declara nenhuma.
+PISO_DA_REGUA: dict[str, int] = {"raizes": 2, "falas": 0, "numeros": 3, "abas": 0}
 
 _O_QUE_O_PISO_MEDE: dict[str, str] = {
     "raizes": "raiz(es) de tela varrida(s) (`RAIZES_DE_TELA`)",

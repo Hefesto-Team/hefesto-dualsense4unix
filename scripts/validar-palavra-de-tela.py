@@ -346,13 +346,7 @@ def conferir_html(raiz: Path = PAGINAS) -> list[str]:
 
 
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
-DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
-    "ERRO ao aplicar perfil (daemon offline?).": (
-        "23/08/2026 — `app/actions/footer_actions.py`, o aviso de falha ao "
-        "aplicar perfil. Vira `Não consegui aplicar o perfil — o Hefesto pode "
-        "estar desligado.`"
-    ),
-}
+DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {}
 
 ESCOADOUROS: dict[str, int] = {
     "set_label": 1,

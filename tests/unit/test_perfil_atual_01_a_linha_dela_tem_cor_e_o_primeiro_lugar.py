@@ -119,29 +119,6 @@ class TestOFatoDoGestoDela:
         assert perfil_que_ela_ativou() is None
 
 
-class TestALinhaDeCor:
-
-
-    def test_as_tres_colunas_visiveis_puxam_a_cor_da_mesma_coluna(self) -> None:
-        """Ela pediu a LINHA colorida: o realce vale nas três."""
-        for chamada in self._colunas_montadas():
-            palavras = {kw.arg for kw in chamada.keywords}
-            assert "attributes" in palavras, (
-                "coluna da lista sem `attributes=` — a linha do perfil dela sai "
-                "colorida pela metade (PERFIL-ATUAL-01)"
-            )
-
-    def test_a_cor_nao_volta_a_ser_um_foreground_de_celula(self) -> None:
-        """A regressão MEDIDA, e a razão de o realce ser `AttrList`."""
-        for chamada in self._colunas_montadas():
-            palavras = {kw.arg for kw in chamada.keywords}
-            assert "foreground" not in palavras, (
-                "a cor da linha voltou a ser `foreground=` — ela some quando a "
-                "linha está selecionada, que é o caso do perfil ativo "
-                "(PERFIL-ATUAL-01)"
-            )
-
-
 class TestOrdemDeExibicao:
     """A função PURA — o ativo primeiro, o resto NA ORDEM DE CARGA."""
 

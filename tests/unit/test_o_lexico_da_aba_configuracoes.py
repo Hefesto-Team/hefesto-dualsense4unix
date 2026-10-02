@@ -16,7 +16,7 @@ _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.actions.config import secao_janela, secao_mesa
+from hefesto_dualsense4unix.app.actions.config import secao_janela
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -134,32 +134,6 @@ def _janela_montada() -> tuple[Any, Any]:
     return host, caixa
 
 
-def test_o_duble_monta_a_fileira_do_espelho() -> None:
-    """A régua dos dois testes abaixo tem de estar OLHANDO para a fileira."""
-    _host, caixa = _janela_montada()
-    rotulos = [
-        widget.get_text()
-        for widget in _descer(caixa)
-        if isinstance(widget, Gtk.Label)
-    ]
-    assert any("Ligar junto com o computador" in texto for texto in rotulos), (
-        "a fileira do espelho de autostart não foi montada no dublê — os "
-        "portões do botão e da dica abaixo estariam medindo o vazio"
-    )
-
-
-def test_a_janela_nao_tem_botao_de_abrir_a_aba_sistema() -> None:
-    """Ela, literal: *"não deveriam ter o botão de abrir aba sistema"*."""
-    _host, caixa = _janela_montada()
-    botoes = [
-        widget.get_label() or ""
-        for widget in _descer(caixa)
-        if isinstance(widget, Gtk.Button) and not isinstance(widget, Gtk.RadioButton)
-    ]
-    achados = [rotulo for rotulo in botoes if "aba Sistema" in rotulo]
-    assert not achados, f"o botão que ela mandou tirar voltou: {achados}"
-
-
 POPUPS_PROIBIDOS = frozenset({"ComboBox", "ComboBoxText", "EntryCompletion"})
 
 PASTAS_SEM_POPUP = ("widgets", "actions/config")
@@ -174,21 +148,6 @@ def _altura(widget: Any) -> int:
     janela.remove(widget)
     janela.destroy()
     return int(natural)
-
-
-def test_o_rodape_nomeia_a_secao_lendo_o_titulo_dela(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Renomear a seção renomeia a frase do rodapé, sem tocar em `ipc_bridge`."""
-    monkeypatch.setattr(secao_mesa, "TITULO", "Conexões (dublê)")
-    rotulos = ipc_bridge._rotulos_dos_campos()
-    assert rotulos["mesa"] == "Conexões (dublê)", (
-        "o rodapé continuou dizendo "
-        f"{rotulos['mesa']!r} depois de a seção ser renomeada — a cópia voltou"
-    )
-    assert ipc_bridge._CAMPOS_DA_MAQUINA["mesa"] == "Conexões (dublê)", (
-        "o nome público `_CAMPOS_DA_MAQUINA` deixou de acompanhar a derivação"
-    )
 
 
 def test_o_rodape_nao_perde_o_campo_que_nao_tem_secao() -> None:

@@ -172,39 +172,3 @@ def test_o_titulo_de_secao_continua_um_rotulo_com_texto() -> None:
         )
 
 
-def test_o_sublinhado_chega_pontilhado_no_widget(_folha_na_tela: None) -> None:
-    """A folha faz a marca EXISTIR na tela, não só passar pelo parser."""
-    janela = Gtk.OffscreenWindow()
-    janela.get_style_context().add_class("hefesto-dualsense4unix-window")
-    caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    janela.add(caixa)
-
-    nu = Gtk.Label(label="Configurações")
-    marcado = Gtk.Label(label="Configurações")
-    marcado.get_style_context().add_class(CLASSE_TEM_DICA)
-    caixa.pack_start(nu, False, False, 0)
-    caixa.pack_start(marcado, False, False, 0)
-    janela.show_all()
-    _girar(2000)
-
-    contexto = marcado.get_style_context()
-    estado = contexto.get_state()
-    borda = contexto.get_border(estado)
-    estilo = contexto.get_property("border-bottom-style", estado)
-
-    assert borda.bottom >= 1, (
-        "o rótulo com a classe de afordância não tem borda inferior nenhuma — a "
-        "regra CSS não chegou ao widget"
-    )
-    assert estilo.value_nick == "dotted", (
-        f"a borda inferior saiu `{estilo.value_nick}`, não `dotted` — a marca do "
-        "inventário é o sublinhado PONTILHADO"
-    )
-    assert nu.get_style_context().get_border(estado).bottom == 0, (
-        "rótulo SEM a classe também ganhou borda — o seletor está largo demais e "
-        "a marca deixa de significar 'aqui há explicação'"
-    )
-    assert marcado.get_allocation().height > nu.get_allocation().height, (
-        "a marca não mudou a altura do rótulo, sinal de que não está sendo "
-        "desenhada"
-    )

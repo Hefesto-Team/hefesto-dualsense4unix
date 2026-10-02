@@ -615,16 +615,16 @@ def _sem_marcacao(texto: str) -> str:
     return _re.sub(r"\s*•\s*", " · ", sem_tags).strip()
 
 
-# disso — `app/actions/rumble_actions.py:779` escreve *"não há IPC de política
+# disso — `app/actions/rumble_actions.py` escreve *"não há IPC de política
 from . import coracao, gesto, largada  # noqa: E402
 
-#: estável (`app/actions/rumble_actions.py:861`, `weak = 160` / `strong =
+#: estável (`app/actions/rumble_actions.py`, `weak = 160` / `strong =
 PAR_DE_TESTE = (160, 220)
 
 _O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 
 #:
-#: (`app/actions/rumble_actions.py:954-959`) remove a fonte GLib pendente e é
+#: (`app/actions/rumble_actions.py`) remove a fonte GLib pendente e é
 _VEZ = [0]
 
 _EM_TESTE = [""]
@@ -906,7 +906,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
     `daemon/ipc_handlers.py:3782`. O número sai do próprio bloco `controllers`
     (`core/backend_pydualsense.py:5016`, `"index": idx`), que é a posição em
     `list(self._handles)` — o MESMO que cada linha do seletor da janela estável
-    carrega (`app/actions/status_actions.py:967`).
+    carrega (`app/actions/status_actions.py`).
 
     O RECURSO À POSIÇÃO NA MESA existe porque nem toda entrada publica `index`
     (backend falso, daemon legado); o próprio handler cai nesse recurso em
@@ -971,7 +971,7 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     `ipc_handlers.py:4042` lê `uniq_do_alvo_de_output` antes de zerar.
 
     É o MESMO par de passos da janela estável, só que sem seletor: lá o chip
-    manda `controller.target.set` (`app/actions/status_actions.py:1613`) e a
+    manda `controller.target.set` (`app/actions/status_actions.py`) e a
     aba Rumble manda o `rumble.set` depois. Aqui os dois viram um gesto só,
     porque nesta aba o endereço é a coluna — a fita nasce esmaecida de
     propósito (decisão dela, 28/08).
@@ -1591,14 +1591,14 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     1. `controller.target.set` — sem ele o par iria para os quatro (`_mirar`);
     2. `rumble_set_checked` — a mesma função do `on_rumble_test_500ms`
-       (`app/actions/rumble_actions.py:979`). A CHECADA, e não a crua: a
+       (`app/actions/rumble_actions.py`). A CHECADA, e não a crua: a
        recusa do Modo Nativo vem no CORPO da resposta, não como erro JSON-RPC
        (`app/ipc_bridge.py:456`), e foi por não a ler que a aba anunciou
        "vibração travada" com o motor parado — NATIVO-RUMBLE-01.
 
     O `rumble_stop` E O `rumble_passthrough(True)` NÃO SUMIRAM DO PRODUTO —
     mudaram de dono. Eles são o "Parar", e continuam sendo os dois passos
-    exatos do `_rumble_test_stop` (`rumble_actions.py:1138-1139`): parar sozinho
+    exatos do `_rumble_test_stop` (`rumble_actions.py`): parar sozinho
     fixa `(0, 0)` e o laço do daemon re-afirma o silêncio, e o jogo ficaria mudo
     depois de um teste (SPRINT-GAME-RUMBLE-01). **A mão só volta ao jogo quando
     ela clicar em Parar** — que é exatamente o que ela pediu, e é o preço
@@ -1636,7 +1636,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     mão ao jogo"*. Na janela estável são DOIS botões: o "Parar"
     (`rumble_stop_checked`, que FIXA `(0, 0)` e manda o laço re-afirmar o
     silêncio) e o "Devolver ao jogo" (`rumble_passthrough(True)`,
-    `rumble_actions.py:925`).
+    `rumble_actions.py`).
 
     O NOME DO MÉTODO DO DONO **NÃO** SE ESCREVE AQUI, e não é descuido: ele é o
     `sinal` da linha 177 do `docs/data/paridade-gtk-html.csv`, e
@@ -1656,7 +1656,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     erro porque é o único canal que esta aba tem hoje; um recado de tela para
     ele ainda não existe, e está no relato.
     """
-    # estável faz em `on_rumble_stop` (`rumble_actions.py:1031`). Sem ela, um
+    # estável faz em `on_rumble_stop` (`rumble_actions.py`). Sem ela, um
     _minha_vez()
     _mirar(ctx, o, p)
     _calar_o_teste_da_haptica(p)

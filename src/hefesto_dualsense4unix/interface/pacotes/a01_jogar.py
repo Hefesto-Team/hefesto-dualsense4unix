@@ -914,7 +914,7 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
     virtual**, e `mascara_efetiva` só é lida na criação de um
     (`gamepad.py:1736`). O clique é aceito, gravado no disco e não muda nada que
     se veja. A janela GTK escondia a caixa inteira fora do modo `gamepad`
-    (`home_actions.py:1857`, `set_visible(modo_exibido == "gamepad")`); esta
+    (`home_actions.py`, `set_visible(modo_exibido == "gamepad")`); esta
     tela deixava clicar e ficava calada — que é
     pior, porque o silêncio se lê como defeito.
 
@@ -2426,7 +2426,7 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
 
     PASSO 2 — `identity.renumber`: compacta a numeração preservando a ordem
     relativa. **A ORDEM É A ENTREGA** e está escrita no botão antigo
-    (`home_actions.py:1975`): *"renumerar antes de reconciliar compactaria uma
+    (`home_actions.py`): *"renumerar antes de reconciliar compactaria uma
     mesa que ainda não está completa."*
 
     E A RECUSA DO SEGUNDO NÃO É ERRO: com o jogo aberto o daemon recusa

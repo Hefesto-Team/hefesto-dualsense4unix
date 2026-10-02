@@ -26,8 +26,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("status cards")
 
-import re
-from pathlib import Path
 from typing import Any
 
 import gi
@@ -40,9 +38,7 @@ pytest.importorskip("cairo")
 
 from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions import status_actions as sa_mod
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
-from hefesto_dualsense4unix.interface import cartao_do_controle as cc_mod
 from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
 
 COR_A = (16, 32, 72)
@@ -219,20 +215,5 @@ def test_rotulo_lightbar_funcao_pura(
 ) -> None:
     rotulo, _base = rotulo_lightbar(_entry(**entry_kw), _state(**state_kw))
     assert rotulo == esperado
-
-
-def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
-    """Baseline da mixin: 2 periódicos em ms + 1 periódico em segundos +"""
-    src_mixin = Path(sa_mod.__file__).read_text(encoding="utf-8")
-    src_card = Path(cc_mod.__file__).read_text(encoding="utf-8")
-
-    assert len(re.findall(r"GLib\.timeout_add\(", src_mixin)) == 2
-    assert len(re.findall(r"GLib\.timeout_add_seconds\(", src_mixin)) == 2
-    assert len(re.findall(r"GLib\.idle_add\(", src_mixin)) == 2
-
-    assert len(re.findall(r"GLib\.timeout_add\(", src_card)) == 2
-    assert len(re.findall(r"def _on_\w+_repouso\(self\)", src_card)) == 2
-    assert re.search(r"GLib\.timeout_add_seconds\(", src_card) is None
-    assert re.search(r"GLib\.idle_add\(", src_card) is None
 
 

@@ -82,17 +82,6 @@ def test_a_divergencia_nao_aponta_de_app_para_a_janela() -> None:
         "que existe para a citação continuar sendo UMA.")
 
 
-def test_a_porta_do_markup_e_uma_so() -> None:
-    """O par (arquivo, alvo) do inventário tem contagem 1, e ela não pode subir."""
-    linhas = pathlib.Path(aba.__file__).read_text(encoding="utf-8").splitlines()
-    imports = [linha for linha in linhas
-               if linha.lstrip().startswith("from") and "aba_sistema" in linha]
-    assert len(imports) == 1, (
-        f"este arquivo tem {len(imports)} `import` do módulo da janela que sabe "
-        f"tirar markup, e o inventário declara UM. O portão reprova quando a "
-        f"contagem de um par declarado sobe — use `_sem_markup`.")
-
-
 def test_todo_selo_novo_esta_na_escada_da_gravidade(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

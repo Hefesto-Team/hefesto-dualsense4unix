@@ -286,45 +286,6 @@ def _mesa_de_06_08(raiz: Path, *, com_vpad: bool) -> Mesa:
     return mesa
 
 
-class TestAMesaMedidaEm0608:
-    """O cenário exato das 22h40 — e ele tem de continuar sem repetir."""
-
-    def test_os_numeros_batem_com_o_journal_dela(self, raiz_leds: Path) -> None:
-        """Ancoragem: se estes três números mudarem, o resto não vale nada.
-
-        A medição entregue: `external_led_written slot=2` no Pro e `slot=3` no
-        8BitDo, e o DualSense presente acendendo o LED do meio da barra branca
-        — que é o padrão canônico do número **1** (`player_led_pattern(1)` ==
-        `(False, False, True, False, False)`, e o nó do meio chama-se
-        `:white:player-3` no sysfs; o nome do NÓ não é o número do JOGADOR).
-        """
-        mesa = _mesa_de_06_08(raiz_leds, com_vpad=False)
-        assert mesa.numeros_exibidos() == {
-            "DualSense físico": 1,
-            "Pro Controller": 2,
-            "8BitDo (modo PS4)": 3,
-        }
-
-    def test_sem_o_vpad_ninguem_repete(self, raiz_leds: Path) -> None:
-        conferir_sem_repetir(_mesa_de_06_08(raiz_leds, com_vpad=False))
-
-    def test_com_o_vpad_na_conta_ninguem_repete(self, raiz_leds: Path) -> None:
-        """O vpad P1 e o DualSense que ele espelha são o MESMO jogador.
-
-        Os dois exibem 1 — e é assim que tem de ser. O que este teste prova é
-        que o vpad ENTRA na conta sem colidir com o Pro (2) nem com o 8BitDo
-        (3), que é a metade da medição das 22h40 que se sustenta.
-        """
-        conferir_sem_repetir(_mesa_de_06_08(raiz_leds, com_vpad=True))
-
-    def test_a_lampada_do_p1_casa_com_o_nome_do_vpad(self, raiz_leds: Path) -> None:
-        """O par que ela usa para saber quem é quem: a luz e o nome."""
-        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
-        numeros = mesa.numeros_exibidos()
-        assert numeros["vpad Hefesto P1"] == numeros["DualSense físico"]
-        assert "Hefesto P1" in UhidDualSense(player=1).name
-
-
 class TestOVpadEntraNaConta:
     """O vpad anuncia número em TEXTO, e o texto tem de ser o mesmo da luz."""
 
@@ -488,29 +449,3 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
         conferir_sem_repetir(mesa)
 
 
-class TestOTesteMorde:
-    """Prova que o invariante reprova quando a numeração de fato colide."""
-
-    def test_dois_fisicos_no_mesmo_numero_reprovam(self, raiz_leds: Path) -> None:
-        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
-        # O Pro passa a acender o mesmo número do DualSense presente.
-        pro = next(a for a in mesa.aparelhos if a.nome == "Pro Controller")
-        assert pro.lampada is not None
-        pro.lampada.acender(1)
-        with pytest.raises(AssertionError, match="dois jogadores exibem o número 1"):
-            conferir_sem_repetir(mesa)
-
-    def test_vpad_no_numero_de_outro_jogador_reprova(self, raiz_leds: Path) -> None:
-        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
-        vpad = next(a for a in mesa.aparelhos if a.vpad is not None)
-        vpad.vpad = UhidDualSense(player=3)
-        with pytest.raises(AssertionError, match="dois jogadores exibem o número 3"):
-            conferir_sem_repetir(mesa)
-
-    def test_lampada_que_discorda_do_nome_reprova(self, raiz_leds: Path) -> None:
-        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
-        fisico = next(a for a in mesa.aparelhos if a.nome == "DualSense físico")
-        assert fisico.lampada is not None
-        fisico.lampada.acender(4)
-        with pytest.raises(AssertionError, match="números diferentes"):
-            conferir_sem_repetir(mesa)

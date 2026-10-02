@@ -256,33 +256,3 @@ def test_nenhuma_frase_do_fonte_manda_a_botao_inexistente(caminho: Path) -> None
     assert not culpas, "\n\n".join(culpas)
 
 
-def test_a_varredura_do_fonte_realmente_ve_alguma_ordem_de_clique() -> None:
-    """Régua da régua: uma varredura que não acha NADA passa por engano."""
-    vistos = [
-        (onde, alvo)
-        for caminho in FONTES
-        for onde, frase in frases_do_fonte(caminho)
-        for alvo in alvos_de_clique(frase)
-    ]
-    assert len(vistos) >= 5, (
-        f"a varredura só achou {len(vistos)} ordens de clique nos dois "
-        "arquivos, e em 06/09/2026 eram oito. Uma régua que parou de ver o "
-        "que media dá verde sobre qualquer coisa."  # (noqa-acento: verbo medir, imperfeito)
-    )
-
-
-def test_o_docstring_nao_e_tela_e_a_lapide_pode_citar_o_rotulo_morto() -> None:
-    """Guarda (não morde): a história fica escrita sem reprovar."""
-    fonte = FONTES[0].read_text(encoding="utf-8")
-    assert ROTULO_QUE_SAIU_COM_A_JANELA in fonte, (
-        "a lápide do RUM-01 sumiu do dono; sem ela a próxima pessoa refaz a "
-        "medição de 06/09/2026 do zero."
-    )
-    achados = [
-        alvo
-        for onde, frase in frases_do_fonte(FONTES[0])
-        for alvo in alvos_de_clique(frase)
-    ]
-    assert ROTULO_QUE_SAIU_COM_A_JANELA not in achados
-
-

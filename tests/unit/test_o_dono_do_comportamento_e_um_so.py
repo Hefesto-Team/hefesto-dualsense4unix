@@ -82,11 +82,9 @@ def test_cura_descosturada_reprova(portao):
 
 def test_so_gtk_que_a_tela_nova_ja_chama_reprova(portao):
     def mexer(linhas):
-        for linha in linhas:
-            if linha["veredito"] == "SO-GTK":
-                linha["dono"] = "app/actions/home_actions.py:mascara_viva"
-                return
-        pytest.fail("o mapa não tem nenhuma linha SO-GTK")
+        linha = linhas[0]
+        linha["veredito"] = "SO-GTK"
+        linha["dono"] = "app/actions/home_actions.py:mascara_viva"
 
     assert portao(mexer) == 1
 

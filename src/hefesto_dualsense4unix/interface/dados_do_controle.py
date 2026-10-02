@@ -14,7 +14,7 @@ erro de montagem. A receita tem duas metades, e as duas são necessárias:
 * quem alinha cards LADO A LADO é cada card ter ``valign=FILL`` e
   ``vexpand=True`` — é o que faz o card ocupar a célula inteira em vez de
   encolher para o próprio conteúdo (o único grid de cards de hoje,
-  ``status_actions.py:815``, faz o OPOSTO, com ``Align.START``: lá eles ficam
+  ``status_actions.py``, faz o OPOSTO, com ``Align.START``: lá eles ficam
   EMPILHADOS, e a EMPILHA-01 continua valendo naquela aba);
 * quem alinha cards de LINHAS DIFERENTES é o ``row_homogeneous`` do
   ``Gtk.Grid``, que é da seção, não daqui.

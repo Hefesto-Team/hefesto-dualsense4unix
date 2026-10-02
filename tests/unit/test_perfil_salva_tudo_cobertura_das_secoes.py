@@ -283,31 +283,6 @@ class TestTodaSecaoDoPerfilTemIdaEVolta:
 class TestORegistroNaoPodeSerDecorativo:
     """Um literal bonito satisfaria a pergunta 1 sem cobrir coisa nenhuma."""
 
-    def test_cada_secao_coberta_tem_gesto_e_conferencia(self) -> None:
-        """``SECOES_COBERTAS`` e ``_GESTOS`` têm de ter as mesmas chaves."""
-        arvore = _arvore(_IRMAO)
-        cobertas = set(_chaves_de_dicionario_literal(arvore, "SECOES_COBERTAS"))
-        gestos = set(_funcoes_citadas_em_gestos(arvore))
-        assert cobertas == gestos, (
-            "o registro de ida e volta divergiu dos casos que rodam de fato — "
-            f"só no literal: {sorted(cobertas - gestos)}; "
-            f"só nos gestos: {sorted(gestos - cobertas)}"
-        )
-
-    def test_as_funcoes_citadas_existem_no_modulo_irmao(self) -> None:
-        """Gesto e conferência nomeados no registro têm de existir."""
-        arvore = _arvore(_IRMAO)
-        existentes = _nomes_de_funcao(arvore)
-        faltando: list[str] = []
-        for campo, nomes in _funcoes_citadas_em_gestos(arvore).items():
-            assert len(nomes) == 2, (
-                f"_GESTOS[{campo!r}] não é um par (gesto, conferência)"
-            )
-            faltando.extend(n for n in nomes if n not in existentes)
-        assert not faltando, (
-            f"o registro cita funções que não existem em {_IRMAO.name}: "
-            f"{sorted(set(faltando))}"
-        )
 
     def test_o_registro_diz_qual_superficie_escreve_cada_secao(self) -> None:
         """A descrição de cada seção não pode ser um enfeite vazio."""

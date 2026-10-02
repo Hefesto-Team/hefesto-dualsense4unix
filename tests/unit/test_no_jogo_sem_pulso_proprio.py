@@ -38,15 +38,3 @@ def test_o_painel_no_jogo_nao_agenda_nada() -> None:
     )
 
 
-def test_a_regua_enxerga_o_arquivo_certo() -> None:
-    """A contraprova da régua de cima, e ela não é cerimônia."""
-    caminho = Path(pnj_mod.__file__)
-    fonte = _fonte_do_painel()
-
-    assert caminho.name == "painel_no_jogo.py"
-    assert "class PainelNoJogo" in fonte
-    assert "GLib.timeout_add" in fonte, (
-        "A docstring do painel cita `GLib.timeout_add` para dizer que não usa "
-        "nenhum. Se nem a menção sobrou, a régua de cima passou a medir a "
-        "ausência de um texto que ninguém escreveu."
-    )

@@ -376,10 +376,6 @@ class TestFiacaoNoCard:
 
         return Path(controller_card.__file__).read_text(encoding="utf-8")
 
-    def test_widget_real_atualiza_a_linha_no_update(self) -> None:
-        fonte = self._fonte()
-        assert "self._update_motion(entry, state_global)" in fonte
-        assert "self._motion_label" in fonte
 
     def test_linha_e_inline_dim_label_nunca_popup(self) -> None:
         """Veto cosmic-comp: indicador inline (dim-label), sem Popover/Popup."""
@@ -389,5 +385,3 @@ class TestFiacaoNoCard:
         assert 'add_class("dim-label")' in trecho
         assert "Popover" not in fonte
 
-    def test_stub_espelha_a_semantica(self) -> None:
-        assert "self.motion = texto_motion(entry, state_global)" in self._fonte()

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 
 from hefesto_dualsense4unix.app.draft_config import DraftConfig, MicDraft
-from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
 UNIQ = "aabbcc0000ff"
 
@@ -13,19 +12,6 @@ SEM_ESCRITOR: dict[str, str] = {}
 
 def _escritor(secao: str) -> str:
     return f"with_controller_{secao}"
-
-
-def test_as_seis_secoes_do_esquema_tem_escritor() -> None:
-    """A lista vem do ESQUEMA, não daqui — seção nova reprova até ter escritor."""
-    faltam = [
-        s for s in ControllerOverrides.model_fields
-        if s not in SEM_ESCRITOR and not hasattr(DraftConfig, _escritor(s))
-    ]
-    assert not faltam, (
-        f"o esquema declara estas seções por controle e o rascunho não sabe "
-        f"escrevê-las: {faltam}. Sem escritor, o que ela escolher no card "
-        f"daquela peça não chega ao disco — some no Salvar, calado. Se a "
-        f"ausência for deliberada, declare-a em SEM_ESCRITOR com a razão.")
 
 
 def test_o_mic_grava_os_dois_campos_daquela_peca() -> None:

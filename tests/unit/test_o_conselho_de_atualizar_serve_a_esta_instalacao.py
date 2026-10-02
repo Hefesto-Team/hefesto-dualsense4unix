@@ -139,23 +139,6 @@ class TestAsOnzeFrasesObedecemAInstalacao:
         assert repo_files.esta_instalacao_e_um_checkout() is True
 
 
-    def test_a_aba_mouse_sem_o_modulo(
-        self, sem_checkout: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        markup = self._pintar_a_aba_mouse(monkeypatch)
-
-        assert "Falta um componente do mouse virtual" in markup, markup
-        assert "install.sh" not in markup, markup
-        assert repo_files.FRASE_DE_ATUALIZAR[False] in markup, markup
-
-    def test_a_aba_mouse_no_checkout_nao_mudou(
-        self, com_checkout: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        markup = self._pintar_a_aba_mouse(monkeypatch)
-
-        assert "./install.sh" in markup, markup
-
-
     @staticmethod
     def _laudo_do_quirk(tmp_path: Path) -> str:
         """O ramo "a cura do travamento não está instalada"."""
@@ -237,52 +220,6 @@ class TestAsOnzeFrasesObedecemAInstalacao:
         (clone / "install.sh").write_text("#!/bin/bash\n", encoding="utf-8")
         monkeypatch.setattr(da, "BASES_DE_INSTALACAO", (clone,))
         assert da.esta_instalacao_e_um_checkout() is True
-
-
-    def test_a_dica_do_botao_cinza(
-        self, daemon_sem_checkout: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        dica = self._dica_do_botao_cinza(monkeypatch)
-
-        assert "não foi instalado como serviço" in dica, dica
-        assert "install.sh" not in dica, dica
-
-    def test_a_dica_do_botao_cinza_no_checkout_nao_mudou(
-        self, daemon_com_checkout: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A cura não podia piorar o caso que já funcionava."""
-        dica = self._dica_do_botao_cinza(monkeypatch)
-
-        assert "./install.sh" in dica, dica
-
-
-    def test_o_recado_sem_systemctl(self, daemon_sem_checkout: None) -> None:
-        recado = self._recado_sem_systemctl()
-
-        assert "gerenciador de serviços" in recado, recado
-        assert "install.sh" not in recado, recado
-
-    def test_o_recado_sem_systemctl_no_checkout_nao_mudou(
-        self, daemon_com_checkout: None
-    ) -> None:
-        """A cura não podia piorar o caso que já funcionava."""
-        recado = self._recado_sem_systemctl()
-
-        assert "./install.sh" in recado, recado
-
-
-    def test_a_dica_do_canal_sem_a_regra(self, sem_checkout: None) -> None:
-        dica = self._dica_do_canal_sem_a_regra()
-
-        assert "NÃO está instalada nesta" in dica, dica
-        assert "install.sh" not in dica, dica
-        assert repo_files.FRASE_DE_ATUALIZAR[False] in dica, dica
-
-    def test_a_dica_do_canal_no_checkout_nao_mudou(self, com_checkout: None) -> None:
-        """A cura não podia piorar o caso que já funcionava."""
-        dica = self._dica_do_canal_sem_a_regra()
-
-        assert "./install.sh" in dica, dica
 
 
     @staticmethod

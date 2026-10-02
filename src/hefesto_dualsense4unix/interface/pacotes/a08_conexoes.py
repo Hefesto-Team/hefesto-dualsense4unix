@@ -1608,7 +1608,7 @@ def _teto_do_controle(
     errada. O `<select>` mostra três coisas e `ControllerRumbleOverride` aceita
     quatro políticas; só o `economia` tem opção no campo
     (`interface.conexoes.rotulo_da_politica` diz por quê). Um perfil escrito pela
-    janela estável — `app/actions/rumble_actions.py:756` — ou editado à mão
+    janela estável — `app/actions/rumble_actions.py` — ou editado à mão
     guarda uma das outras três.
 
     FATO SUBSTITUÍDO — 19/09/2026. Aqui estava: *"Medido em 01/09/2026: zero dos
@@ -2140,7 +2140,7 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     letras (`daemon/ipc_handlers.py:3833`): *"Com o alvo setado,
     lightbar/gatilhos/player-LED/rumble/mic-LED passam a mirar SÓ aquele
     controle"*. É o mesmo método que o seletor da GUI estável chama
-    (`app/actions/status_actions.py:1614`).
+    (`app/actions/status_actions.py`).
 
     ELE NÃO TEM FUNÇÃO NO `ipc_bridge` — é o degrau 3 da ponte, e passa pelo
     mesmo `_safe_call`, com o mesmo timeout.

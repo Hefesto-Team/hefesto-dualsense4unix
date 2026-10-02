@@ -126,24 +126,6 @@ def test_regra_especifica_alta_nao_infla_a_prioridade_do_novo() -> None:
     )
 
 
-def test_o_rodape_passa_a_prioridade_calculada_ao_to_profile() -> None:
-    """O contrato do call site: `_persist_profile_async` não pode voltar a chamar"""
-    from pathlib import Path
-
-    fonte = Path(
-        __file__
-    ).resolve().parents[2] / "src/hefesto_dualsense4unix/app/actions/footer_actions.py"
-    texto = fonte.read_text(encoding="utf-8")
-
-    assert "_prioridade_acima_dos_catch_all" in texto, (
-        "o rodapé voltou a salvar sem calcular a prioridade — o perfil novo "
-        "nasce no default do esquema (0) e perde para os catch-all dela"
-    )
-    assert "to_profile(nome, priority=" in texto, (
-        "o `to_profile` do rodapé precisa receber a prioridade explicitamente"
-    )
-
-
 def _tem_atributo_publico(obj: Any, nome: str) -> bool:
     return hasattr(obj, nome)
 

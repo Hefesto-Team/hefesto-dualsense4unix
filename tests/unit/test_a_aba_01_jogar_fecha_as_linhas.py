@@ -231,30 +231,6 @@ def test_o_cadeado_confirma_em_verde() -> None:
         aba.cadeado(_ctx([], freestyle_ligado=True), {"evento": "click"}, p)
 
 
-def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
-    """O rótulo e a dica são da janela antiga, palavra por palavra."""
-    import re
-
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
-             ).read_text()
-    colado = re.sub(r'"\s*\n\s*"', "", fonte)
-
-    assert f'label="{aba.CADEADO_ROTULO}"' in colado, (
-        f"o rótulo {aba.CADEADO_ROTULO!r} não é o do `Gtk.CheckButton` da "
-        f"janela antiga — texto de tela novo é decisão DELA, e este devia ser "
-        f"texto que ela já leu")
-    assert aba.CADEADO_DICA in colado, (
-        "a dica do cadeado se afastou da da janela antiga. As duas dizem a "
-        "mesma coisa para a mesma pessoa; duas versões vivas é o defeito que a "
-        "regra do fato-errado existe para matar")
-    assert aba.CADEADO_RECUSA in colado, (
-        f"a recusa do cadeado ({aba.CADEADO_RECUSA!r}) não é a frase que a "
-        f"janela antiga põe na tela quando o `freestyle_set` volta "
-        f"`None`. Texto de tela NOVO é decisão dela (PROVA-DE-TELA-01); esta "
-        f"linha existe para que a tela nova não invente uma segunda maneira de "
-        f"dizer o mesmo desfecho")
-
-
 def test_o_cadeado_esta_na_pagina_com_os_dois_lados() -> None:
     """Endereço de pintura E endereço de clique — um sem o outro é meio botão."""
     doc = _pagina()
@@ -427,22 +403,6 @@ def test_so_o_true_literal_acende_o_marcador() -> None:
     assert aba._e_o_primario({"is_primary": "sim"}) == ""
 
 
-def test_a_palavra_do_primario_e_a_que_ela_ja_leu() -> None:
-    """A palavra do marcador é a da janela antiga — a régua LÊ, não digita.
-
-    O dono é `home_actions._format_controller_subtitle`, que monta a linha
-    secundária do card e acrescenta exatamente a palavra quando `is_primary`.
-
-    A MORDIDA: mude uma letra de `MARCA_DO_PRIMARIO` e esta régua reprova.
-    """
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
-             ).read_text()
-    assert f'parts.append("{aba.MARCA_DO_PRIMARIO}")' in fonte, (
-        f"a palavra {aba.MARCA_DO_PRIMARIO!r} não é a que a janela antiga põe na "
-        f"linha secundária do card. Texto de tela novo é decisão DELA, e este "
-        f"devia ser texto que ela já leu")
-
-
 def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
     """Passo 5 — com o estado vazio a coluna DIZ, e nada mais é afirmado."""
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
@@ -482,24 +442,6 @@ def test_o_selo_do_servico_abre_a_escada_da_gravidade() -> None:
         {"selo": aba.SELO_DO_SERVICO, "texto": "c"},
     ])]
     assert selos[0] == aba.SELO_DO_SERVICO, f"o canal ordenou {selos!r}"
-
-
-def test_a_frase_do_servico_e_a_que_ela_ja_leu() -> None:
-    """A primeira frase é a da janela GTK, palavra por palavra — a régua LÊ.
-
-    `home_actions._render_home` escreve ``set_text("O Hefesto está desligado.")``
-    no ramo `offline`, e o `validar-palavra-de-tela` já a declara como a
-    tradução de "daemon offline".
-
-    A MORDIDA: mude uma letra de `SERVICO_DESLIGADO` e esta régua reprova.
-    """
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
-             ).read_text()
-    assert f'set_text("{aba.SERVICO_DESLIGADO}")' in fonte, (
-        f"{aba.SERVICO_DESLIGADO!r} não é a frase que a janela antiga escreve "
-        f"com o daemon fora do ar — texto de tela novo é decisão DELA")
-    assert aba.SERVICO_CALADO.startswith(aba.SERVICO_DESLIGADO), (
-        "a frase da coluna deixou de começar pela frase do dono")
 
 
 def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:

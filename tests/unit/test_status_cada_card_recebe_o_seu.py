@@ -41,34 +41,6 @@ class _AbaDeMentira(S):  # type: ignore[misc]
         self.alimentados: list[tuple[Any, dict[str, Any]]] = []
 
 
-def test_cada_card_recebe_o_registro_do_proprio_controle() -> None:
-    """A MORDIDA: troque `_conectados_na_ordem_dos_cards(conectados)` de volta
-    por `conectados` no `parear` (e nas duas grades de produção) e o teste
-    reprova nomeando, controle a controle, qual `uniq` estava na chave e qual
-    chegou no registro.
-
-    A fixture serve porque a mesa dela está fora de ordem de propósito:
-    ``player_slot`` 4, 1, 3, 2 na ordem de enumeração do daemon.
-    """
-    pares = _AbaDeMentira().parear(_mesa_cheia())
-
-    errados = [
-        {
-            "posição": pos,
-            "uniq na chave": key[1],
-            "uniq no registro": entry.get("uniq"),
-            "player_slot que a tela vai imprimir": entry.get("player_slot"),
-        }
-        for pos, (key, entry) in enumerate(pares)
-        if key[1] != entry.get("uniq")
-    ]
-
-    assert not errados, (
-        "card alimentado com o registro de OUTRO controle — a chave diz um "
-        f"aparelho e o dado é de outro: {errados}"
-    )
-
-
 def test_nenhuma_grade_da_aba_casa_as_chaves_com_a_lista_crua() -> None:
     """O portão que teria pego este defeito no dia em que ele nasceu.
 

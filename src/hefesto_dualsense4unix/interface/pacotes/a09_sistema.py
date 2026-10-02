@@ -289,7 +289,7 @@ def _achados(state: dict[str, Any] | None,
     no singular ou no plural.
 
     OS DOIS QUE FALTAVAM — 03/09/2026, e por isso o exame desta tela era 6/8 do
-    exame da GTK. `_refresh_storm_diag` (`daemon_actions.py:882` e `:1185`)
+    exame da GTK. `_refresh_storm_diag` (`daemon_actions.py` e `:1185`)
     acrescenta ao `storm_report` mais dois achados, e os dois só FALAM QUANDO HÁ
     PROBLEMA (devolvem `None` quando está tudo bem — decisão dela de 22/08/2026
     para o vigia do Steam Input):
@@ -628,7 +628,7 @@ def _repouso_do_painel(state: dict[str, Any] | None,
     """O painel "Detalhes técnicos" SEM ninguém clicar — e ele deixa de ser um traço.
 
     A GTK NUNCA TEVE UM TRAÇO AQUI: o `Gtk.TextView` dela fica sempre com a saída
-    de `systemctl status <unit>` (`daemon_actions.py:1577` e `:2549`), reescrita
+    de `systemctl status <unit>` (`daemon_actions.py` e `:2549`), reescrita
     a cada refresh — quem abre a aba já lê "está ativo? desde quando? falhou?".
     Esta tela mostrava `—` até alguém clicar em "Ver detalhes", e a nota de
     `aba_sistema.SEM_FONTE` que explicava o traço falava de OUTRA coisa (as 80
@@ -1562,7 +1562,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O QUE MUDA EM RELAÇÃO À JANELA ANTIGA, e é decisão dela: lá o
     `_ao_escolher` **não manda IPC** — acumula em `host._maquina_pendente` e só o
-    "Aplicar" do rodapé grava (`footer_actions.py:181`). Aqui vale a regra de
+    "Aplicar" do rodapé grava (`footer_actions.py`). Aqui vale a regra de
     01/09: *"clicar na cor já deveria aplicar"*. O gesto age na hora, e o
     caminho é o MESMO que aquele "Aplicar" usa — `machine_declare_detalhado`, do
     `ipc_bridge`. Não é uma segunda porta para o disco.

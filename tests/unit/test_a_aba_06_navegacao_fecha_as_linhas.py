@@ -356,18 +356,6 @@ def test_a_confirmacao_do_voltar_ao_padrao_usa_a_palavra_atalhos():
         f"diz a palavra: {frase!r}")
 
 
-def test_o_custo_do_teclado_e_o_que_a_gtk_diz():
-    """A frase desta aba não pode divergir do toast da janela antiga."""
-    from pacotes import a06_navegacao
-
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/emulation_actions.py"
-             ).read_text(encoding="utf-8")
-    achatado = re.sub(r'"\s*\n\s*"', "", fonte)
-    assert a06_navegacao.O_QUE_SAI_COM_O_TECLADO in achatado, (
-        "o que esta aba diz que sai com o teclado não está mais escrito na "
-        f"GTK: {a06_navegacao.O_QUE_SAI_COM_O_TECLADO!r}")
-
-
 @pytest.mark.parametrize(
     ("bloco", "fala"),
     [({"enabled": False, "osk_disponivel": True}, True),

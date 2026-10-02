@@ -15,7 +15,6 @@ import pytest
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 
-from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento
 from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
@@ -37,16 +36,6 @@ VERBOS_DE_EFEITO = (
     "reduz",
     "no máximo",
 )
-
-
-def test_o_titulo_da_secao_e_o_rotulo_do_rodape_sao_a_mesma_palavra() -> None:
-    """MORDIDA 2. A seção e o rodapé nomeiam o mesmo campo, ou a tela se contradiz."""
-    assert ipc_bridge._CAMPOS_DA_MAQUINA["orcamento"] == secao_orcamento.TITULO, (
-        "o título da seção e o rótulo do rodapé divergiram — o renome tem DUAS "
-        f"pontas: `secao_orcamento.TITULO` = {secao_orcamento.TITULO!r} e "
-        "`ipc_bridge._CAMPOS_DA_MAQUINA['orcamento']` = "
-        f"{ipc_bridge._CAMPOS_DA_MAQUINA['orcamento']!r}"
-    )
 
 
 def test_nenhuma_dica_promete_o_que_o_botao_nao_faz() -> None:

@@ -388,7 +388,7 @@ def trigger_reset_detalhado(
 
     Estes três parágrafos moraram no invólucro `trigger_reset`, podado em
     26/08/2026 por não ter chamador nenhum: quem aperta "Desligar" é
-    `app/actions/triggers_actions.py:560`, e chama esta.
+    `app/actions/triggers_actions.py`, e chama esta.
     """
     ok, motivo, corpo = _call_checked_detalhado(
         "trigger.reset", _payload_trigger_reset(side, uniq)

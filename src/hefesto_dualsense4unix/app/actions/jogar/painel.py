@@ -403,7 +403,7 @@ def aviso_do_grab_dobrado(state: dict[str, Any] | None) -> str | None:
     a I9 já tirou do meio do montador de widgets exatamente para ser chamada de
     fora da GTK — ``is_primary and gamepad_on and grab_state == "failed"``. O
     que esta função faz é o que faltava: **ler do ``state`` os três termos** que
-    a janela antiga lia dos widgets dela (`home_actions.py:1892` passa
+    a janela antiga lia dos widgets dela (`home_actions.py` passa
     ``state.get("primary_grab_state")`` e o ``is_primary`` de cada cartão).
 
     ``aviso_de_grab`` devolve ``(linha, porquê)`` — a linha era o rótulo e o

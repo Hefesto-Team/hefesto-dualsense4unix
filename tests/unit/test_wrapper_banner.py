@@ -38,7 +38,6 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
 )
 
 
-
 def _state(wrapper_used: object = "__ausente__") -> dict[str, Any]:
     gamepad: dict[str, Any] = {
         "enabled": True,
@@ -160,37 +159,6 @@ def _status_stub(banner: _FakeBanner | None) -> Any:
             return banner if widget_id == "status_wrapper_banner" else None
 
     return _Stub()
-
-
-class TestRefreshNaAbaStatus:
-    def test_false_pinta_e_mostra(self) -> None:
-        banner = _FakeBanner()
-        stub = _status_stub(banner)
-
-        stub._refresh_wrapper_banner(_state(False))
-
-        assert banner.visible is True
-        assert banner.text == WRAPPER_MISSING_TEXT
-
-    def test_true_esconde(self) -> None:
-        banner = _FakeBanner()
-        stub = _status_stub(banner)
-
-        stub._refresh_wrapper_banner(_state(True))
-
-        assert banner.visible is False
-
-    def test_offline_esconde(self) -> None:
-        banner = _FakeBanner()
-        stub = _status_stub(banner)
-
-        stub._refresh_wrapper_banner(None)
-
-        assert banner.visible is False
-
-    def test_widget_ausente_nao_explode(self) -> None:
-        stub = _status_stub(None)
-        stub._refresh_wrapper_banner(_state(False))
 
 
 def _aba_status_falsa() -> Any:

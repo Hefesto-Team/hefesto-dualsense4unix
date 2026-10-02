@@ -67,8 +67,7 @@ def _escada() -> dict[str, float]:
     divergência em dez combinações de degrau e orçamento.
 
     ``rumble_actions._POLICY_MULT`` é ``{**RUMBLE_POLICY_MULT, "auto": 1.0}`` e
-    o comentário de ``rumble_actions.py:315`` o chama, por escrito, de *"a única
-    cópia autorizada em ``app/``"*. Há portão que vigia isso por varredura —
+    ele é a única cópia autorizada em ``app/``. Há portão que vigia isso por varredura —
     ``test_orcamento_dono_unico_do_valor_efetivo.
     test_nenhum_modulo_de_app_recalcula_a_escada`` reprova a escada do daemon
     INDEXADA em qualquer arquivo de ``app/``, e este módulo o deixava
@@ -353,7 +352,7 @@ def textos_do_estado(
     return linhas
 
 
-# linha (`app/actions/rumble_actions.py:1021`), com as suas próprias
+# linha (`app/actions/rumble_actions.py`), com as suas próprias
 # promessa pública sem caminho — é o que o `portao_a_casa_sabe_e_o_produto_
 # ESTADO`: os dois gestos da aba terminam em `rumble_passthrough(True)`, de
 

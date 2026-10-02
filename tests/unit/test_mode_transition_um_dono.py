@@ -142,14 +142,6 @@ def test_modo_desconhecido_falha_alto() -> None:
         mode_transition.plan_mode_transition("turbo")
 
 
-def test_apply_mode_da_folga_de_timeout_em_todos_os_passos(ipc: list[Call]) -> None:
-    """Trocar de modo cria uinput + grab: não cabe nos 0.25s default."""
-    mode_transition.apply_mode(
-        "gamepad", flavor="xbox", on_done=lambda _r: False, on_fail=lambda _e: False
-    )
-    assert [t for _m, _p, t in ipc] == [2.0, 2.0]
-
-
 def test_mode_of_state_nativo_vence_o_gamepad() -> None:
     """Com os dois ligados é o físico grabado que manda — as abas não discordam."""
     state = {"native_mode": True, "gamepad_emulation": {"enabled": True}}

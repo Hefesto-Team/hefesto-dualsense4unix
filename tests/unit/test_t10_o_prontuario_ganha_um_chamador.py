@@ -90,26 +90,3 @@ class TestNuncaDerrubaOResto:
         assert interpretar_prontuario_dos_jogos(censo) is None
 
 
-class TestOModuloDeixouDeSerOrfao:
-    def test_o_prontuario_tem_chamador_de_producao(self) -> None:
-        """A mordida da OUTRA metade: o órfão deixou de ser órfão."""
-        import ast
-        from pathlib import Path
-
-        from hefesto_dualsense4unix.app.actions import daemon_actions
-
-        fonte = Path(daemon_actions.__file__).read_text(encoding="utf-8")
-        importa = [
-            no
-            for no in ast.walk(ast.parse(fonte))
-            if isinstance(no, ast.ImportFrom)
-            and no.module == "hefesto_dualsense4unix.integrations"
-            and any(a.name == "prontuario_dos_jogos" for a in no.names)
-        ]
-
-        assert importa, (
-            "a aba Sistema voltou a não chamar o prontuário — 1.037 linhas "
-            "sem chamador de produção é a família F2, e este módulo já passou "
-            "um mês assim"
-        )
-

@@ -14,7 +14,8 @@ SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 MAPA = RAIZ / "docs" / "data" / "donos-de-comportamento.csv"
 
 #: LER a do daemon (`radio_ar`, `radio_governador`). As duas saíram do mapa.
-TETO_DE_LINHAS_DUPLICADAS = 2101
+# 02/10/2026: as duplicatas da janela GTK saíram com ela; a dívida que sobra é 51.
+TETO_DE_LINHAS_DUPLICADAS = 51
 
 TELA_NOVA = ("interface", "app/actions/perfis_web.py", "app/actions/jogar")
 

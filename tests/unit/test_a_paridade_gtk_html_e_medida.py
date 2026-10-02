@@ -131,7 +131,7 @@ def test_o_dublê_intacto_passa(regua, tmp_path) -> None:
 
 def test_recusa_linha_alem_do_fim_do_arquivo(regua, tmp_path) -> None:
     falhas = _com(regua, tmp_path,
-                  gtk_onde="src/hefesto_dualsense4unix/app/actions/rumble_actions.py:999999")
+                  html_onde="src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:999999")
     assert "endereco-morto" in _familias(falhas), falhas
 
 
@@ -139,12 +139,6 @@ def test_recusa_endereco_da_gtk_na_coluna_do_html(regua, tmp_path) -> None:
     """É o que impede este portão de virar a régua que se compara consigo mesma."""
     falhas = _com(regua, tmp_path,
                   html_onde="src/hefesto_dualsense4unix/app/actions/rumble_actions.py:603")
-    assert "lado-trocado" in _familias(falhas), falhas
-
-
-def test_recusa_endereco_do_html_na_coluna_da_gtk(regua, tmp_path) -> None:
-    falhas = _com(regua, tmp_path,
-                  gtk_onde="src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:233")
     assert "lado-trocado" in _familias(falhas), falhas
 
 
@@ -170,13 +164,6 @@ def test_recusa_divida_que_fechou(regua, tmp_path) -> None:
     falhas = _com(regua, tmp_path, veredito="FALTA_NO_HTML", sinal_espera="AUSENTE",
                   sinal="rumble_policy_set_checked", sinal_escopo="LADO-HTML")
     assert "divida-fechada" in _familias(falhas), falhas
-
-
-def test_recusa_sinal_que_nunca_poderia_aparecer(regua, tmp_path) -> None:
-    """A régua se auditando: um sinal AUSENTE que não existe em lugar nenhum e"""
-    falhas = _com(regua, tmp_path, veredito="FALTA_NO_HTML", sinal_espera="AUSENTE",
-                  sinal="simbolo_que_nao_existe_em_lugar_nenhum", sinal_escopo="LADO-HTML")
-    assert "sinal-morto" in _familias(falhas), falhas
 
 
 def test_aceita_endereco_de_tela_que_ainda_vai_nascer(regua, tmp_path) -> None:

@@ -272,7 +272,7 @@ def _ordenada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 SEGUNDOS_PARA_CONFIRMAR = 8.0
 
-#: (`profiles_actions.py:2874`) — "Perfil removido: X", "Lista recarregada",
+#: (`profiles_actions.py`) — "Perfil removido: X", "Lista recarregada",
 #: `mensagem_do_salvar`, `mensagem_de_ativacao`. Aqui só a RECUSA falava:
 #: `RuntimeError` vira tarja (`hefesto_vivo._recusou_dizendo`) e o SUCESSO era
 _DESFECHO: tuple[str, float] | None = None
@@ -1132,7 +1132,7 @@ def _rotulo_do_remover(alvo: str) -> str:
 
     A dica no desenho diz *"Apaga do disco. Pergunta antes."* — e esta janela
     não tem diálogo. O `on_profile_remove` da janela estável abre um
-    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:1908`), que é
+    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
     thread** (`hefesto_vivo.py:2703`) e GTK só aceita diálogo no laço principal.
 
@@ -1367,7 +1367,7 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ELE NÃO FALA COM O DAEMON, e é o único desta aba que não fala — de
     propósito. Escolher uma linha não muda nada no aparelho; muda o ALVO dos
     botões ao lado, que é o que a janela estável faz no
-    `on_profile_selection_changed` (`profiles_actions.py:1777`). Ligar isto ao
+    `on_profile_selection_changed` (`profiles_actions.py`). Ligar isto ao
     `profile.switch` faria passar o mouse pela lista trocar o perfil que está
     valendo — o oposto da coluna ter um botão "Ativar".
 
@@ -1410,7 +1410,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
        botão age sobre o escolhido — o `_ESCOLHIDO` vem primeiro, e o `texto`
        fica como último recurso (é o que a prova declarada exercita).
     2. **A RECUSA DO DAEMON SUMIA.** `profile_switch` devolve `False` quando ele
-       não confirmou (`ipc_bridge.py:211`, ATIVAR-NAO-MENTE-01) e o retorno era
+       não confirmou (`ipc_bridge.py:196`, ATIVAR-NAO-MENTE-01) e o retorno era
        descartado: o piloto imprimia "→ aplicado" sobre uma troca que não
        aconteceu. Levantar aqui é o que faz o botão recusar dizendo.
     """
@@ -1439,7 +1439,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     )
 
     frase = mensagem_de_ativacao(nome, corpo)
-    # (`profiles_actions.py:1928`). Sem ela, o `launch_env.refresh` que esta aba
+    # (`profiles_actions.py`). Sem ela, o `launch_env.refresh` que esta aba
     return _dizer(_com_a_carona(frase))
 
 
@@ -1461,7 +1461,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     AS DUAS CHAMADAS DEPOIS DO DISCO NÃO SÃO ENFEITE:
 
     * `profile.reaplicar` — **o daemon não relê JSON de perfil por conta
-      própria** (PERFIL-SAVE-APPLY-01, `profiles_actions.py:2114`). Sem ele o
+      própria** (PERFIL-SAVE-APPLY-01, `profiles_actions.py`). Sem ele o
       arquivo volta ao que era e o controle continua com o de agora, que é o
       sintoma que ela leu como "não está salvando". Só quando o perfil restaurado
       é o que está VALENDO: reaplicar outro trocaria o perfil pelas costas dela.
@@ -1785,7 +1785,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     voltava ao normal e mais nada: um gesto que APAGA um `.json` e cria outro
     terminava mudo, e o único jeito de saber que pegou era esperar a lista
     repintar. A frase é a do produto, `mensagem_do_salvar(nome, renomeado_de=…)`
-    (`profiles_actions.py:456`) — a MESMA que o rodapé da janela estável
+    (`profiles_actions.py`) — a MESMA que o rodapé da janela estável
     escreve, "Perfil renomeado: era → novo".
 
     SEM `reaplicou=`, e é o honesto: quem reaplica é `gravar_e_reaplicar`, que
@@ -2135,7 +2135,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     resultado no tique seguinte.
 
     O PRODUTO JÁ FAZ ISSO, e não é invenção desta tela: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:1865`) chama
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py`) chama
     `_select_radio("steam_game")` **e** preenche o campo, no mesmo gesto.
 
     QUAL DAS DUAS ELE ESCOLHE: `normalize_appid` decide — só dígitos (ou um
@@ -2305,7 +2305,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     arquivo nasce e a lista o mostra no tique seguinte, já aberto no editor.
 
     A REGRA DO JOGO EM FOCO É A MESMA DO PRODUTO, e a guarda também: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:1865`) só age quando há
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py`) só age quando há
     **appid da Steam**, e devolve `False` calado no resto. É o que este gesto
     faz — com jogo da Steam em foco nasce mirando aquele jogo, sem ele nasce
     catch-all, "que é o certo para um perfil de desktop" (palavras de lá).
@@ -2313,7 +2313,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
     PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
     que depende de widget"*. **Não depende.** O corpo de
-    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:2632`) lê UM
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:370`) lê UM
     atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
     `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
     lista, e esta aba já a tem na mão.
@@ -2432,7 +2432,7 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     `ponte` junto, e a janela estável o CORTA de propósito: em
     `_build_profile_from_editor` o duplicar entra como estreia
     (`estreia = _new_profile or _duplicate_source is not None`,
-    `profiles_actions.py:2797`), o degrau 2 de `carimbo_que_o_save_leva` é
+    `profiles_actions.py`), o degrau 2 de `carimbo_que_o_save_leva` é
     cortado, e o degrau 1 — o disco, pelo nome NOVO — devolve `None`.
 
     POR QUE ISSO IMPORTA, e o cenário é o gesto seguinte ao duplicar: repontar a
@@ -2444,7 +2444,7 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     A REGRA NÃO É REESCRITA AQUI: quem decide é `carimbo_que_o_save_leva`, o
     mesmo dono que a aba Perfis e o rodapé já consultam
-    (`profile_writer.py:21`). Os argumentos são os do caso: `existente` é quem
+    (`profile_writer.py:10`). Os argumentos são os do caso: `existente` é quem
     ocupa o nome novo em disco (ninguém — `_nome_livre` acabou de garantir), e
     não há rascunho. Se a escada mudar, esta linha muda com ela.
     """
@@ -2516,7 +2516,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     feito"*. A premissa está certa e a conclusão não segue — a janela estável
     tem o MESMO botão, sobre uma lista que ela também mantém em cache
     (`on_profile_reload` → `_reload_profiles_store` + toast "Lista recarregada",
-    `profiles_actions.py:2020`). O trabalho que ele faz não é a leitura: é
+    `profiles_actions.py`). O trabalho que ele faz não é a leitura: é
     **dizer que leu**. Um botão cuja promessa é tranquilizar não fica mudo
     porque o produto já estava certo.
 
@@ -2531,7 +2531,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     segundo gesto desta aba sem chamada de ponte — o outro é o `selecionar`.
 
     A FRASE É A DA JANELA ESTÁVEL, palavra por palavra: `"Lista recarregada"`
-    (`profiles_actions.py:2016`). O número de perfis vai junto porque é o que
+    (`profiles_actions.py`). O número de perfis vai junto porque é o que
     faz o clique VALER: ela relê para conferir que o perfil novo apareceu.
     """
     carga = pacote(ctx)

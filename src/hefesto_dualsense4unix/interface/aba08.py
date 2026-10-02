@@ -899,7 +899,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-corpo .ltrava{display:none}
   .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
   .gc-corpo .ltrava.on ~ .btn:hover{color:var(--texto-mudo)}
-  /* REGRA DELA, escrita em `secao_controles.py:109`: *"sempre visível mas só
+  /* REGRA DELA: *"sempre visível mas só
      acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
      instável. */
   .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
@@ -1908,7 +1908,7 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
 
     A DICA É HOVER DO RÓTULO, e não um `?`: no produto ela é
     `texto.set_tooltip_text(...)` sobre o próprio `Gtk.Label` da pergunta
-    (`secao_mesa.py:419`). E tem de ser — ver o comentário do `.mm-sala` no CSS:
+    (`secao_mesa.py`). E tem de ser — ver o comentário do `.mm-sala` no CSS:
     dica dentro da `.moldura` é dica recortada.
 
     O QUE **NÃO** VEIO ANEXADO: o produto gruda a `moldura.QUANDO_VALE` no fim

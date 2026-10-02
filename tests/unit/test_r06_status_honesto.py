@@ -90,34 +90,3 @@ class _Aba(ea.EmulationActionsMixin):
         return self._label if nome == "emulation_steam_input_status_label" else None
 
 
-class TestStatusDaAba:
-
-    def test_sem_allowlist_a_linha_nao_muda(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        markup, varridas = self._refresh(
-            monkeypatch, appids=[], exposicao={"/dev/hidraw0": True}
-        )
-        assert "Desligado — tudo certo" in markup
-        assert "xceção" not in markup
-        assert varridas == []
-
-
-    def test_excecao_configurada_mas_o_fisico_segue_escondido(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Era exatamente este estado — configurada e sem efeito — que a GUI"""
-        markup, varridas = self._refresh(
-            monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": False}
-        )
-        assert markup.endswith("Exceção por jogo: 1 jogo(s)</span>"), markup
-        assert "só valendo durante o jogo" not in markup
-        assert varridas == []
-
-    def test_sem_fisico_visivel_nao_afirma_nada(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        markup, varridas = self._refresh(monkeypatch, appids=[2111190], exposicao={})
-        assert markup.endswith("Exceção por jogo: 1 jogo(s)</span>"), markup
-        assert "sem controle físico visível" not in markup
-        assert varridas == []

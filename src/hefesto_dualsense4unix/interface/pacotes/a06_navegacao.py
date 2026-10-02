@@ -1716,7 +1716,7 @@ def _velocidade(p: Any, o: dict[str, Any], campo: str,
     start/stop e sem gravar o flag**. É o que impede um ajuste de velocidade de
     RELIGAR a emulação e matar o gamepad virtual — a regressão que o
     BUG-MOUSE-GUI-SYNC-01 (A4) fechou. O `_send_mouse_param_async` da GUI
-    estável (`app/actions/mouse_actions.py:394`) manda exatamente este payload.
+    estável (`app/actions/mouse_actions.py`) manda exatamente este payload.
 
     ELE NÃO LÊ O `ctx`, E É A DIFERENÇA QUE A BARRA TROUXE. Os `-`/`+` liam o
     estado do último tique porque um passo precisa saber de ONDE parte — e daí
@@ -1795,7 +1795,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     `enabled=false` — ler a tela inverteria o gesto no primeiro clique.
 
     O PORTÃO DO MODO É DO PRODUTO, e está copiado dele: `_sync_mouse_mode_gate`
-    (`app/actions/mouse_actions.py:205`) faz `blocked = mode != MODE_DESKTOP` e
+    (`app/actions/mouse_actions.py`) faz `blocked = mode != MODE_DESKTOP` e
     desliga o interruptor nos DOIS sentidos, inclusive com o modo desconhecido.
     A razão está escrita lá e é o que este gesto herda: *"Ligar o switch durante
     'Jogar pelo Hefesto' derrubava o vpad e os jogadores do co-op SEM AVISO (a

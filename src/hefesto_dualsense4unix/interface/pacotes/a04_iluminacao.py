@@ -1625,7 +1625,7 @@ def sem_resposta_do_daemon() -> str:
 
     A FRASE NÃO SE ESCREVE AQUI. `lightbar_actions._AVISO_HEFESTO_DESLIGADO` é
     a que a janela GTK mostra neste mesmo evento — o ramo em que o `led.set`
-    por `uniq` volta sem corpo (`lightbar_actions.py:657-658`). Duas telas do
+    por `uniq` volta sem corpo (`lightbar_actions.py`). Duas telas do
     mesmo produto dizendo coisas diferentes sobre o mesmo daemon desligado é a
     segunda verdade que esta casa persegue.
 
@@ -1796,7 +1796,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     recusasse a escrita levaria junto a aplicação, que não tem nada a ver.
 
     ELE É O `_aplicar_cor_no_controle` DA GTK, no que esta tela pode ter
-    (`app/actions/lightbar_actions.py:624`). Duas coisas que faltavam, e as duas
+    (`app/actions/lightbar_actions.py`). Duas coisas que faltavam, e as duas
     estavam medidas:
 
     **1. O BRILHO VIAJA JUNTO.** A linha era `p.led_set(rgb, uniq=uniq)`, sem o
@@ -1806,7 +1806,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     que mostra `50%` no trilho mandava a cor a 100%, e um clique num tom
     DESFAZIA o brilho que ela tinha escolhido na janela GTK — sem uma palavra.
     A GTK manda `brightness=self._current_brightness` em toda escrita
-    (`lightbar_actions.py:653`); aqui o número sai de `brilho_aceso`, que
+    (`lightbar_actions.py`); aqui o número sai de `brilho_aceso`, que
     é o MESMO que a coluna imprime.
 
     **2. O DESFECHO SE LÊ DO CORPO DO DAEMON.** A porta era `led_set` (`bool`), e

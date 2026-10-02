@@ -386,7 +386,7 @@ def mesa_do_estado(
                 # respondia certo na aba 02 — e o comentário DELE já afirmava
                 # (errado) que as duas traduções eram a mesma. Agora são.
                 # A razão está escrita no dono da frase longa
-                # (`app/actions/home_actions.py:971`): *"'?' não é resposta —
+                # (`app/actions/home_actions.py`): *"'?' não é resposta —
                 # é a tela encolhendo os ombros"*.
                 "via": _via_do_transporte(transporte),
                 "transporte": transporte,

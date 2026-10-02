@@ -176,35 +176,6 @@ class TestMensagemDoDoctor:
         assert tag == sd.OK
 
 
-class TestLinhaDaAbaEmulacao:
-
-    def test_conta_os_jogos_e_larga_a_palavra_conflito(self) -> None:
-        """A LINHA CONTA OS JOGOS — FRASES-E-DICAS-02, 13/09/2026."""
-        markup = self._markup()
-        assert "Ligado em 1 jogo" in markup
-        assert "appid" not in markup
-        assert "conflita" not in markup
-        assert "próximo ciclo" not in markup
-
-    def test_chave_global_nao_finge_ter_jogo(self) -> None:
-        markup = self._markup(jogos=[])
-        assert "ajuste global da Steam" in markup
-        assert "appid" not in markup
-
-
-    def test_nome_com_e_comercial_nao_quebra_o_markup(self) -> None:
-        """Pango engasga com `&` cru — e um jogo chamado "Rick & Morty" existe."""
-        markup = self._markup(jogos=["Sam & Max (appid 321)"])
-        assert "Sam" not in markup
-        assert "&" not in markup
-
-    def test_o_bloco_de_excecoes_do_r06_continua_no_lugar(self) -> None:
-        """A CONTAGEM FICA E A NARRAÇÃO SAI — FRASES-E-DICAS-03, 13/09/2026."""
-        markup = self._markup(on=False, jogos=[], excecoes=[2111190])
-        assert markup.endswith("· Exceção por jogo: 1 jogo(s)</span>"), markup
-        assert "—" not in markup.split("Exceção por jogo")[1], markup
-
-
 class TestToastDosBotoes:
     _ROTULO = "Sackboy: A Big Adventure (appid 1599660)"
 

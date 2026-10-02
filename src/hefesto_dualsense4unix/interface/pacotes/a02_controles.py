@@ -1512,7 +1512,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # morre, o novo nasce sem leitura e a chave `audio` SOME do `state_full`.
         # o selo sem montar um `state_full` inteiro.
         pct = c.get("battery_pct")
-        # do dono na GTK (`interface/cartao_do_controle.py:3275`, `"l3" in
+        # do dono na GTK (`interface/cartao_do_controle.py`, `"l3" in
         apertados = set(e.get("buttons") or ())
         # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
         toque_txt, dedos = dedos_do_controle(e)
@@ -2798,7 +2798,7 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     QUEM LIGA NÃO É A JANELA, e isso é uma cicatriz, não um detalhe de desenho.
     A GUI estável escreve a DECLARAÇÃO (`machine.declare`) e quem sobe a ponte é
-    o daemon; o `_ao_alternar_o_microfone` de `secao_controles.py:807` diz por quê: *"o
+    o daemon; o `_ao_alternar_o_microfone` de `secao_controles.py` diz por quê: *"o
     processo da janela não pode ter esse gesto ao alcance de um clique enquanto
     a posse do hidraw não for arbitrada — o susto de 16/08/2026"*. Aqui é igual:
     este gesto DECLARA, e o `bt_mic` do daemon reconcilia sozinho — a fonte dele
