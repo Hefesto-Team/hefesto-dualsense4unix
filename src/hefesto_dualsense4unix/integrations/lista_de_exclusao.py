@@ -78,12 +78,16 @@ import time
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.utils.leitura_pela_assinatura import LeituraPelaAssinatura
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import BibliotecaDoLancador
 
 #: O arquivo, ao lado das outras listas, no ``XDG_CONFIG_HOME``.
 RELPATH = "hefesto-dualsense4unix/lista_de_exclusao.json"
@@ -318,9 +322,9 @@ def _anotar_na_trava(destino: Path, novos: dict[str, cpe.YmlDoJogo]) -> str:
 #: prefixo do Guardiões tem um `app_name` só).
 _MORADORES_DO_HEROIC = "installed_games"
 
-#: Os prefixos divididos já ditos no diário, com o número de moradores — uma
-#: linha por mudança, e não uma por transição.
-_DIVIDIDOS_DITOS: set[tuple[str, int]] = set()
+#: Os prefixos divididos já ditos no diário, com o número de moradores e se o
+#: censo leu — uma linha por mudança, e não uma por transição.
+_DIVIDIDOS_DITOS: set[tuple[str, int, bool]] = set()
 
 
 def _resolvido(caminho: str | Path) -> Path | None:
@@ -330,15 +334,51 @@ def _resolvido(caminho: str | Path) -> Path | None:
         return None
 
 
+def _o_censo_do_heroic(casa: Path) -> BibliotecaDoLancador | None:
+    """A biblioteca que o censo lê nesta casa do Heroic; ``None`` = não leu.
+
+    Não leu: o censo levantou, voltou com erro, ou sem jogo nenhum (a casa
+    sem biblioteca). Quem pergunta trata o ``None`` como «não sei».
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    try:
+        biblioteca = censo._heroic(casa)
+    except Exception:
+        return None
+    return biblioteca if biblioteca.jogos and not biblioteca.erros else None
+
+
 def _moradores(prefixo: Path, casa: Path) -> set[str]:
-    """Os `app_name` dos jogos do Heroic que moram neste prefixo (resolvido).
+    """Os `app_name` dos jogos do Heroic que moram neste prefixo (resolvido)."""
+    return _moradores_e_o_censo(prefixo, casa)[0]
+
+
+def _moradores_e_o_censo(prefixo: Path, casa: Path) -> tuple[set[str], bool]:
+    """``(os moradores deste prefixo, o censo leu)``.
 
     Três fontes, somadas: quem o Heroic anotou em `installed_games`; toda cópia
     da casa (`GamesConfig/<app>.json`) com o mesmo `winePrefix` resolvido; e,
     quando o prefixo é o da lista global (`defaultSettings.winePrefix`), todo
     jogo sem `winePrefix` próprio — as cópias sem ele e os instalados sem
     cópia. Nunca levanta: o que não se lê não entra.
+
+    **SÓ QUEM ESTÁ INSTALADO — 02/10/2026,
+    O-PREFIXO-DIVIDIDO-CONTA-SO-QUEM-ESTA-INSTALADO-01.** As duas primeiras
+    fontes são registros que o Heroic não limpa: o `installed_games` só
+    acrescenta (o único escritor é o lançamento, lido no `app.asar` do 2.22.3
+    dela), e a cópia fica sem «remover as configurações». Medido num lar de
+    mentira: com B desinstalado pelo caminho padrão do Heroic e A excluído, o
+    prefixo seguia «dividido» para sempre, e A, excluído, com o device KS. Quem
+    responde «instalado» é o censo (:func:`_o_censo_do_heroic`): sai das três
+    fontes todo jogo que ele diz NÃO instalado. Quem o censo não conhece (um
+    jogo «adicionado» à mão, que mora em `sideload_apps`; uma loja nova)
+    continua contando, por delegação, a validar por ela: na dúvida o prefixo
+    fica dividido. Sem o censo, nada sai, e o diário diz ``sem_censo=1``.
     """
+    biblioteca = _o_censo_do_heroic(casa)
+    desinstalados = ({j.chave for j in biblioteca.jogos if not j.instalado}
+                     if biblioteca is not None else set())
     fora: set[str] = set()
     try:
         anotados = json.loads((prefixo / _MORADORES_DO_HEROIC).read_text(encoding="utf-8"))
@@ -370,13 +410,10 @@ def _moradores(prefixo: Path, casa: Path) -> set[str]:
                 fora.add(arquivo.stem)
         elif e_o_global:
             fora.add(arquivo.stem)
-    if e_o_global:
-        from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-
-        with contextlib.suppress(Exception):
-            fora.update(j.chave for j in censo._heroic(casa).jogos
-                        if j.instalado and j.chave not in com_copia)
-    return fora
+    if e_o_global and biblioteca is not None:
+        fora.update(j.chave for j in biblioteca.jogos
+                    if j.instalado and j.chave not in com_copia)
+    return fora - desinstalados, biblioteca is not None
 
 
 def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
@@ -393,7 +430,9 @@ def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
     Por delegação, a validar por ela: o prefixo em que mora alguém que ela não
     excluiu fica com o device KS e as camadas, porque tirar a háptica do jogo
     que ela não excluiu custa mais do que deixá-la no que ela excluiu. O diário
-    diz ``exclusao_prefixo_dividido moradores=<n>`` (:func:`_moradores`).
+    diz ``exclusao_prefixo_dividido moradores=<n>`` (:func:`_moradores`), com
+    ``sem_censo=1`` quando o censo do Heroic não leu a casa. Mora quem está
+    instalado (:func:`_moradores_e_o_censo`).
     """
     excluidos: dict[Path, set[str]] = {}
     candidatos: dict[Path, Path] = {}
@@ -407,19 +446,21 @@ def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
                     candidatos.setdefault(real, casa)
     fora: set[Path] = set()
     for prefixo, casa in candidatos.items():
-        moradores = _moradores(prefixo, casa)
+        moradores, leu = _moradores_e_o_censo(prefixo, casa)
         if moradores <= excluidos.get(casa, set()):
             fora.add(prefixo)
             continue
-        dito = (str(prefixo), len(moradores))
+        dito = (str(prefixo), len(moradores), leu)
         if dito not in _DIVIDIDOS_DITOS:
             _DIVIDIDOS_DITOS.add(dito)
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-                get_logger(__name__).info(
-                    "exclusao_prefixo_dividido", moradores=len(moradores),
-                    prefixo=prefixo.name)
+                campos: dict[str, object] = {"moradores": len(moradores),
+                                             "prefixo": prefixo.name}
+                if not leu:
+                    campos["sem_censo"] = 1
+                get_logger(__name__).info("exclusao_prefixo_dividido", **campos)
     return frozenset(fora)
 
 

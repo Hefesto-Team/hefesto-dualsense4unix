@@ -32,6 +32,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+import structlog
 import yaml
 
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
@@ -376,6 +377,103 @@ def test_o_prefixo_global_tem_por_morador_quem_nao_tem_o_seu(_lar: Path) -> None
     (casa / "config.json").write_text(json.dumps(dado))
     lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert lx.prefixos_excluidos() == frozenset(), "C mora no prefixo global e não foi excluído"
+
+
+# ---------------------------------------------------------------------------
+# 4b · Mora no prefixo quem está instalado
+#      (O-PREFIXO-DIVIDIDO-CONTA-SO-QUEM-ESTA-INSTALADO-01)
+# ---------------------------------------------------------------------------
+def _dividido_com_b_fora_do_disco(lar: Path, *, extra: tuple[str, ...] = ()) -> tuple[Path, Path]:
+    """A e B no mesmo prefixo; B desinstalado pelo caminho padrão do Heroic.
+
+    O Heroic 2.22.3 (lido no `app.asar` dela) só acrescenta ao
+    `installed_games`, e a cópia `GamesConfig/B.json` fica sem «remover as
+    configurações»: as duas seguem dizendo B. Quem diz que B saiu do disco é a
+    biblioteca (`is_installed` falso, e fora do `install_info`). ``extra``: mais
+    `app_name` anotados no `installed_games`, que o censo não conhece.
+    """
+    dividido = _prefixo(lar / "Games/Heroic/Prefixes/Dividido")
+    casa = _heroic(lar, {"A": {"winePrefix": str(dividido)},
+                         "B": {"winePrefix": str(dividido)}},
+                   moradores={dividido: ["A", "B", *extra]})
+    biblioteca = casa / "store_cache" / "legendary_library.json"
+    dado = json.loads(biblioteca.read_text())
+    for jogo in dado["library"]:
+        jogo["is_installed"] = jogo["app_name"] == "A"
+    biblioteca.write_text(json.dumps(dado))
+    return dividido, casa
+
+
+def _o_ks_no(prefixo: Path, monkeypatch: pytest.MonkeyPatch) -> bool:
+    """A carona do device KS de verdade, e o que ficou no registro do prefixo."""
+    from hefesto_dualsense4unix.daemon import launch_env
+
+    monkeypatch.setattr(ks, "controles_do_registro",
+                        lambda *x, **k: [ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=42)])
+    launch_env._device_ks_nos_lancadores()
+    return "HEFESTOKS" in (prefixo / "pfx" / "system.reg").read_text()
+
+
+def test_o_morador_que_saiu_do_disco_nao_divide_o_prefixo(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """B saiu do disco e A foi excluído: o prefixo sai do KS e das camadas.
+
+    MORDIDA: tire o filtro do censo do `_moradores_e_o_censo` — o prefixo fica
+    «dividido» por um jogo que não está mais no disco, e A, excluído, segue com
+    o device KS.
+    """
+    dividido, _ = _dividido_com_b_fora_do_disco(_lar)
+    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
+    assert lx.prefixos_excluidos() == frozenset({dividido.resolve()}), (
+        "B saiu do disco e o prefixo seguiu dividido: A, excluído, fica com o KS")
+    assert not _o_ks_no(dividido, monkeypatch), "a carona do KS escreveu no prefixo de A"
+
+
+def test_o_desinstalado_que_volta_divide_de_novo(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """B volta ao disco (o `install_info` o diz instalado): o prefixo volta a ser
+    dividido, e B tem o device KS.
+
+    MORDIDA: o «instalado» lido só do `is_installed` da biblioteca, sem a união
+    com o `install_info` que o censo faz — B segue «fora» e perde a háptica.
+    """
+    dividido, casa = _dividido_com_b_fora_do_disco(_lar)
+    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    assert lx.prefixos_excluidos() == frozenset({dividido.resolve()})
+    (casa / "store_cache" / "legendary_install_info.json").write_text(
+        json.dumps({"A": {}, "B": {}}))
+    assert lx.prefixos_excluidos() == frozenset(), "B voltou ao disco e o prefixo seguiu fora"
+    assert _o_ks_no(dividido, monkeypatch), "B voltou ao disco sem o device KS"
+
+
+def test_quem_o_censo_nao_conhece_continua_morando(_lar: Path) -> None:
+    """Um jogo «adicionado» à mão (o censo não o lista) segue morando.
+
+    MORDIDA: o filtro por «está no censo e instalado» no lugar de «o censo
+    diz não instalado» — o desconhecido sai, e o prefixo dele perde o KS.
+    """
+    dividido, _ = _dividido_com_b_fora_do_disco(_lar, extra=("sideload-a-mao",))
+    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    assert lx.prefixos_excluidos() == frozenset(), (
+        "o jogo que o censo não conhece deixou de morar no prefixo")
+    assert lx._moradores(dividido.resolve(), _lar / ".var/app/com.heroicgameslauncher.hgl"
+                         "/config/heroic") == {"A", "sideload-a-mao"}
+
+
+def test_sem_o_censo_nada_sai_e_o_diario_diz(_lar: Path) -> None:
+    """A biblioteca da GOG está torta: o censo volta com erro, ninguém sai dos
+    moradores (o comportamento de antes), e a linha diz `sem_censo=1`.
+
+    MORDIDA: usar o censo com erro — B sai, e o prefixo também.
+    """
+    dividido, casa = _dividido_com_b_fora_do_disco(_lar)
+    (casa / "store_cache" / "gog_library.json").write_text(json.dumps({"games": "torto"}))
+    lx._DIVIDIDOS_DITOS.clear()
+    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    with structlog.testing.capture_logs() as diario:
+        assert lx.prefixos_excluidos() == frozenset()
+    linhas = [x for x in diario if x.get("event") == "exclusao_prefixo_dividido"]
+    assert linhas and linhas[0].get("sem_censo") == 1, diario
 
 
 # ---------------------------------------------------------------------------
