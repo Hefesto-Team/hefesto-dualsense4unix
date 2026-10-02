@@ -354,13 +354,13 @@ _HID_ORFAO_VID = "054C"
 _HID_ORFAOS_TTL_SEC = 2.0
 
 #: QUEM-SEGURA-O-NOSSO-NO-01: TTL (s) da varredura de `/sys/class/input` que
-#: resolve `evdev`/`hidraw` de cada vpad. Mesmo número dos caches irmãos, e
-#: pela mesma razão — o `state_full` roda a 10-20 Hz e isto muda por gesto
-#: (vpad nascer/morrer). O TTL sozinho deixaria até 2 s de caminho velho no
-#: payload, que é justamente a mentira que o inode existe para impedir; por
-#: isso o cache é re-conferido a cada leitura por `no_ainda_vale`, um `stat`
-#: que não abre nada. TTL para o caso de o nó ter simplesmente APARECIDO
-#: (não há o que reconferir), `stat` para o caso de ele ter MUDADO.
+#: resolve `evdev`/`hidraw` de cada vpad, e só SEM o dono do evento armado (a
+#: janela, a CLI, a suíte). No daemon, a resposta vale até um nó nascer ou
+#: sumir (O-REPOUSO-ESPERA-O-EVENTO-01, família 1): com este TTL e a bandeja
+#: perguntando a cada 3 s, toda pergunta varria tudo de novo. Nos dois
+#: caminhos o cache é re-conferido a cada leitura por `no_ainda_vale`, um
+#: `stat` que não abre nada: o evento (ou o TTL) cobre o nó que APARECEU, e o
+#: `stat` cobre o nó que MUDOU de inode.
 _NO_DO_VPAD_TTL_SEC = 2.0
 
 
@@ -861,11 +861,11 @@ class IpcHandlersMixin:
     #: instância no primeiro uso.
     _hid_orfaos_cache: tuple[float, list[str]] | None = None
 
-    #: QUEM-SEGURA-O-NOSSO-NO-01: cache TTL da varredura de
-    #: `/sys/class/input` que resolve o nó de cada vpad (ver
-    #: `_no_do_vpad_cached`). Chave = `uniq` do vpad, ou `nome:<name>` quando
-    #: não há `uniq` (uinput). Mesmo padrão dos caches acima.
-    _no_do_vpad_cache: dict[str, tuple[float, dict[str, Any]]] | None = None
+    #: QUEM-SEGURA-O-NOSSO-NO-01: o nó de cada vpad (`_no_do_vpad_cached`), por
+    #: `(uniq, nome)`: `(quando, ficha do dono do evento ou None, bloco)`.
+    _no_do_vpad_cache: (
+        dict[tuple[str, str], tuple[float, tuple[int, ...] | None, dict[str, Any]]] | None
+    ) = None
 
     #: MASCARA-01: a task do arming de launch em voo (ver
     #: `_agendar_arming_do_launch`). Referência forte para o GC não recolher
@@ -5124,38 +5124,38 @@ class IpcHandlersMixin:
     def _no_do_vpad_cached(
         self, uniq: str | None, nome: str | None
     ) -> dict[str, Any]:
-        """`{evdev, hidraw, ino, hidraw_ino}` do vpad, com cache TTL + `stat`.
+        """`{evdev, hidraw, ino, hidraw_ino}` do vpad, preso ao evento + `stat`.
 
-        QUEM-SEGURA-O-NOSSO-NO-01. O produto é o único que sabe qual nó do
-        kernel é o vpad dele sem adivinhar — ele carimbou o `uniq` e o `phys`
-        no `UHID_CREATE2`. Publicar isso fecha o buraco que fazia cada
-        instrumento de bancada reimplementar a pergunta com uma régua própria
-        (hoje são três, e uma delas casa por regex de caminho).
-
-        Duas conferências, e cada uma tapa um buraco diferente: o TTL cobre o
-        nó que APARECEU (não havia o que reconferir) e o `no_ainda_vale` cobre
-        o nó que MUDOU (o `event22` de agora ser outro aparelho). Sem a
-        segunda, o payload afirmaria por até 2 s um caminho que já é de
-        outro device — a renumeração é exatamente o defeito que o inode
-        existe para impedir, e seria irônico reintroduzi-la pelo cache.
+        QUEM-SEGURA-O-NOSSO-NO-01. A resposta só muda quando um nó nasce ou some
+        em `/dev/input` ou nos `hidraw*` de `/dev` (as duas raízes: a entrada
+        nasce antes do hidraw). Com o dono do evento armado ela vale até uma das
+        duas gerações mudar (O-REPOUSO-ESPERA-O-EVENTO-01, família 1); sem ele,
+        o TTL de sempre. A pergunta ao dono é pelas raízes que a varredura usa
+        (`no_do_vpad`), e o dono só responde pelas que olha: a raiz desviada da
+        suíte cai no TTL. O `no_ainda_vale` segue barrando o nó que mudou de
+        inode.
         """
-        chave = (uniq or "").strip().casefold() or f"nome:{(nome or '').strip()}"
-        if chave == "nome:":
+        chave = ((uniq or "").strip().casefold(), (nome or "").strip())
+        if chave == ("", ""):
             return dict(NO_DESCONHECIDO)
+        from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
+        from hefesto_dualsense4unix.integrations import no_do_vpad as _ndv
+
+        dono = _ode.dono_armado()
+        ficha = None if dono is None else dono.ficha(
+            (_ndv.RAIZ_DEV_INPUT, _ode.NOMES), (_ndv.RAIZ_DEV, _ode.NOMES)
+        )
         cache = self._no_do_vpad_cache
         if cache is None:
-            cache = {}
-            self._no_do_vpad_cache = cache
-        now = time.monotonic()
-        hit = cache.get(chave)
-        if (
-            hit is not None
-            and (now - hit[0]) < _NO_DO_VPAD_TTL_SEC
-            and no_ainda_vale(hit[1])
-        ):
-            return dict(hit[1])
+            cache = self._no_do_vpad_cache = {}
+        hit, now = cache.get(chave), time.monotonic()
+        valido = hit is not None and (
+            hit[1] == ficha if ficha is not None else now - hit[0] < _NO_DO_VPAD_TTL_SEC
+        )
+        if hit is not None and valido and no_ainda_vale(hit[2]):
+            return dict(hit[2])
         no = resolver_no_do_vpad(uniq=uniq, nome=nome)
-        cache[chave] = (now, no)
+        cache[chave] = (now, ficha, no)
         return dict(no)
 
     # --- CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que não entrou ------

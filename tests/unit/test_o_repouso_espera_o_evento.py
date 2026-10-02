@@ -1415,3 +1415,308 @@ class TestAVoltaPeloEvento:
         volta = _VoltaDeMentira(monkeypatch, daemon, ate=299.0)
         volta.rodar()
         assert len(volta.connects) == 10
+
+
+# ---------------------------------------------------------------------------
+# Régua 2 — o nó do vpad pela geração (a família 1, o `state_full`)
+# ---------------------------------------------------------------------------
+
+import time
+
+from hefesto_dualsense4unix.daemon import ipc_handlers as ipc_mod
+from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+from hefesto_dualsense4unix.integrations import no_do_vpad as no_mod
+from hefesto_dualsense4unix.integrations.uhid_gamepad import (
+    VPAD_HID_PHYS,
+    player_mac,
+)
+
+#: A mesa de 29/09: 54 nós de entrada, quatro deles por vpad `uhid` (o
+#: touchpad, os sensores, o gamepad e o «Headset Jack», com o mesmo `uniq`).
+_NOS_NA_MESA = 54
+_NOS_POR_VPAD = (" Touchpad", " Motion Sensors", "", " Headset Jack")
+
+
+def _nome_do_vpad(jogador: int) -> str:
+    return f"DualSense Wireless Controller (Hefesto P{jogador})"
+
+
+class _MesaDoVpad:
+    """`/sys/class/input` e `/dev` de mentira, no formato do kernel.
+
+    `/sys/class/input/eventN/device` aponta para `<HID>/input/inputM`, e o
+    `hidraw` do vpad mora em `<HID>/hidraw/`, com o nó em `/dev`. O `/dev` é
+    o mesmo que o dono do evento olha (o fixture `raizes`).
+    """
+
+    def __init__(self, tmp_path: Path, entradas: Path, nos: Path) -> None:
+        self.class_input = tmp_path / "sys" / "class" / "input"
+        self.devices = tmp_path / "sys" / "devices"
+        self.class_input.mkdir(parents=True)
+        self.entradas = entradas
+        self.nos = nos
+        self._proximo = 0
+
+    def _no(self, dir_pai: Path, nome: str, uniq: str, numero: int | None = None) -> str:
+        if numero is None:
+            numero = self._proximo
+        self._proximo = max(self._proximo, numero + 1)
+        dir_input = dir_pai / "input" / f"input{numero}"
+        dir_input.mkdir(parents=True)
+        (dir_input / "name").write_text(nome + "\n")
+        (dir_input / "uniq").write_text(uniq + "\n")
+        evento = f"event{numero}"
+        (self.class_input / evento).mkdir()
+        os.symlink(dir_input, self.class_input / evento / "device")
+        (self.entradas / evento).write_text("")
+        return evento
+
+    def outro(self, rotulo: str) -> str:
+        return self._no(self.devices / "platform" / rotulo, f"Teclado {rotulo}", "")
+
+    def vpad(self, jogador: int, *, hidraw: str | None, primeiro: int | None = None) -> Path:
+        dir_hid = self.devices / "virtual" / "misc" / "uhid" / f"0003:054C:0DF2.{jogador:04X}"
+        dir_hid.mkdir(parents=True, exist_ok=True)
+        (dir_hid / "uevent").write_text(
+            f"HID_PHYS={VPAD_HID_PHYS}\nHID_UNIQ={player_mac(jogador)}\n"
+        )
+        for i, sufixo in enumerate(_NOS_POR_VPAD):
+            self._no(
+                dir_hid,
+                _nome_do_vpad(jogador) + sufixo,
+                player_mac(jogador),
+                None if primeiro is None else primeiro + i,
+            )
+        if hidraw is not None:
+            self.hidraw(dir_hid, hidraw)
+        return dir_hid
+
+    def hidraw(self, dir_hid: Path, hidraw: str) -> None:
+        (dir_hid / "hidraw" / hidraw).mkdir(parents=True)
+        (self.nos / hidraw).write_text("")
+
+    def tirar_o_vpad(self, jogador: int) -> None:
+        for pasta in list(self.class_input.iterdir()):
+            if player_mac(jogador) in (pasta / "device" / "uniq").read_text():
+                (self.entradas / pasta.name).unlink()
+                (pasta / "device").unlink()
+                pasta.rmdir()
+
+    def gamepad(self, jogador: int) -> str:
+        for pasta in self.class_input.iterdir():
+            if (pasta / "device" / "name").read_text().strip() == _nome_do_vpad(jogador):
+                return str(self.entradas / pasta.name)
+        raise AssertionError("o gamepad do vpad não está na mesa")
+
+
+class _Relogio:
+    """O `time` do `ipc_handlers` com o `monotonic` de mentira; o resto, o de verdade."""
+
+    def __init__(self) -> None:
+        self.agora = 1_000.0
+
+    def monotonic(self) -> float:
+        return self.agora
+
+    def __getattr__(self, nome: str) -> Any:
+        return getattr(time, nome)
+
+
+class _SoOCache(IpcHandlersMixin):
+    """O mixin com o cache do nó: `_no_do_vpad_cached` não pede mais nada."""
+
+    def __init__(self) -> None:
+        pass
+
+
+@pytest.fixture
+def mesa_do_vpad(
+    tmp_path: Path, raizes: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> _MesaDoVpad:
+    """A mesa de 29/09 (quatro vpads, 54 nós), com o produto apontado para ela."""
+    entradas, nos = raizes
+    mesa = _MesaDoVpad(tmp_path, entradas, nos)
+    for jogador in range(1, 5):
+        mesa.vpad(jogador, hidraw=f"hidraw{jogador}")
+    while mesa._proximo < _NOS_NA_MESA:
+        mesa.outro(f"k{mesa._proximo}")
+    monkeypatch.setattr(no_mod, "RAIZ_CLASS_INPUT", str(mesa.class_input))
+    monkeypatch.setattr(no_mod, "RAIZ_DEV_INPUT", str(entradas))
+    monkeypatch.setattr(no_mod, "RAIZ_DEV", str(nos))
+    return mesa
+
+
+@pytest.fixture
+def relogio(monkeypatch: pytest.MonkeyPatch) -> _Relogio:
+    r = _Relogio()
+    monkeypatch.setattr(ipc_mod, "time", r)
+    return r
+
+
+def _a_bandeja_pergunta(h: _SoOCache, relogio: _Relogio, voltas: int) -> list[dict[str, Any]]:
+    """`voltas` perguntas da bandeja (uma a cada 3 s), os quatro vpads em cada."""
+    blocos: list[dict[str, Any]] = []
+    for _ in range(voltas):
+        for jogador in range(1, 5):
+            blocos.append(h._no_do_vpad_cached(player_mac(jogador), _nome_do_vpad(jogador)))
+        relogio.agora += 3.0
+    return blocos
+
+
+def _varreduras(conta: list[tuple[str, str]], mesa: _MesaDoVpad) -> int:
+    """Uma varredura é uma listagem de `/sys/class/input` (o `_candidatos`)."""
+    return sum(
+        1 for evento, caminho in conta
+        if evento == "os.listdir" and caminho == str(mesa.class_input)
+    )
+
+
+class TestONoDoVpadPelaGeracao:
+    def test_quarenta_perguntas_em_120_s_varrem_uma_vez_por_vpad(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
+    ) -> None:
+        """A sonda de 29/09: 80 varreduras e 4.320 `uniq` por minuto, por relógio.
+
+        MORDIDA: devolva o TTL de 2 s ao caminho armado, e as 40 perguntas dos
+        quatro vpads fazem 160 varreduras.
+        """
+        h = _SoOCache()
+        with contando() as conta:
+            blocos = _a_bandeja_pergunta(h, relogio, 40)
+        assert _varreduras(conta, mesa_do_vpad) == 4
+        uniqs = _sob(conta, mesa_do_vpad.class_input, "open")
+        assert sum(c.endswith("/uniq") for c in uniqs) == 4 * _NOS_NA_MESA
+        assert blocos[-4]["evdev"] == mesa_do_vpad.gamepad(1)
+        assert blocos[-4]["hidraw"] == str(mesa_do_vpad.nos / "hidraw1")
+
+    def test_um_no_que_nasce_varre_de_novo(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
+    ) -> None:
+        h = _SoOCache()
+        _a_bandeja_pergunta(h, relogio, 1)
+        with contando() as conta:
+            _a_bandeja_pergunta(h, relogio, 5)
+        assert _varreduras(conta, mesa_do_vpad) == 0
+        mesa_do_vpad.outro("novo")
+        with contando() as conta:
+            _a_bandeja_pergunta(h, relogio, 5)
+        assert _varreduras(conta, mesa_do_vpad) == 4
+
+    def test_o_vpad_recriado_com_outro_event_e_o_no_novo(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
+    ) -> None:
+        h = _SoOCache()
+        antes = _a_bandeja_pergunta(h, relogio, 1)[0]
+        mesa_do_vpad.tirar_o_vpad(1)
+        mesa_do_vpad.vpad(1, hidraw=None, primeiro=200)
+        depois = h._no_do_vpad_cached(player_mac(1), _nome_do_vpad(1))
+        assert depois["evdev"] == str(mesa_do_vpad.entradas / "event202") != antes["evdev"]
+        assert depois["ino"] == os.stat(mesa_do_vpad.entradas / "event202").st_ino
+
+    def test_o_hidraw_que_nasce_depois_da_entrada_chega_na_pergunta_seguinte(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
+    ) -> None:
+        """O `hid_connect` registra a entrada antes do hidraw.
+
+        MORDIDA: tire a geração dos `hidraw*` de `/dev` da ficha, e o vpad fica
+        com `hidraw: None` até o próximo nó de entrada.
+        """
+        h = _SoOCache()
+        _a_bandeja_pergunta(h, relogio, 1)
+        dir_hid = mesa_do_vpad.vpad(5, hidraw=None)
+        sem = h._no_do_vpad_cached(player_mac(5), _nome_do_vpad(5))
+        assert sem["evdev"] is not None and sem["hidraw"] is None
+        relogio.agora += 3.0
+        mesa_do_vpad.hidraw(dir_hid, "hidraw5")
+        com = h._no_do_vpad_cached(player_mac(5), _nome_do_vpad(5))
+        assert com["hidraw"] == str(mesa_do_vpad.nos / "hidraw5")
+
+    def test_o_dono_de_outra_raiz_nao_prende_o_no(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio, tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """O dono olha um `/dev`, e a varredura usa outro: nada se prende.
+
+        MORDIDA: pergunte ao dono pelas raízes DELE (`dono.raiz_das_entradas`),
+        e não pelas da varredura, e o vpad que nasce no `/dev` que o dono não
+        olha fica «desconhecido» para sempre.
+        """
+        outro_dev = tmp_path / "outro" / "dev"
+        (outro_dev / "input").mkdir(parents=True)
+        outra = _MesaDoVpad(tmp_path / "outro", outro_dev / "input", outro_dev)
+        monkeypatch.setattr(no_mod, "RAIZ_CLASS_INPUT", str(outra.class_input))
+        monkeypatch.setattr(no_mod, "RAIZ_DEV_INPUT", str(outro_dev / "input"))
+        monkeypatch.setattr(no_mod, "RAIZ_DEV", str(outro_dev))
+        h = _SoOCache()
+        assert h._no_do_vpad_cached(player_mac(1), _nome_do_vpad(1))["evdev"] is None
+        outra.vpad(1, hidraw="hidraw1")
+        relogio.agora += 3.0
+        assert h._no_do_vpad_cached(player_mac(1), _nome_do_vpad(1))["evdev"] is not None
+
+    def test_desarmado_o_ttl_de_sempre(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
+    ) -> None:
+        """Sem o dono (a janela, a CLI): cada pergunta a 3 s varre, como antes."""
+        while ode.armado():
+            ode.desarmar()
+        h = _SoOCache()
+        with contando() as conta:
+            _a_bandeja_pergunta(h, relogio, 40)
+        assert _varreduras(conta, mesa_do_vpad) == 4 * 40
+
+
+class _VpadDoStateFull:
+    """O que o `per_vpad` do `state_full` lê de um vpad `uhid`."""
+
+    def __init__(self, jogador: int) -> None:
+        self.backend = "uhid"
+        self.player = jogador
+        self.mac = player_mac(jogador)
+        self.name = _nome_do_vpad(jogador)
+        self.game_open = False
+
+
+class _HandlersDoStateFull(IpcHandlersMixin):
+    def __init__(self, daemon: Any) -> None:
+        self.daemon = daemon
+        self.store = daemon.store
+        self.controller = daemon.controller
+
+
+async def test_o_state_full_da_bandeja_nao_varre_a_cada_pergunta(
+    mesa_do_vpad: _MesaDoVpad, relogio: _Relogio, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O caminho de verdade: a bandeja pede o `state_full` a cada 3 s.
+
+    Dois jogadores (o P1 pelo `_gamepad_device`, o P2 pelo co-op), vinte
+    `state_full` em 60 s de relógio de mentira: duas varreduras, na primeira.
+    MORDIDA: a mesma do TTL (40 varreduras).
+    """
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+    from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
+    from hefesto_dualsense4unix.testing import FakeController
+    from hefesto_dualsense4unix.utils import session
+
+    monkeypatch.setattr(session, "config_dir", lambda ensure=False: tmp_path)
+    daemon = Daemon(controller=FakeController(transport="usb"))
+    daemon.config.coop_enabled = True
+    daemon._gamepad_device = _VpadDoStateFull(1)  # type: ignore[assignment]
+    mgr = CoopManager(daemon)
+    mgr._players["aabbcc000002"] = _SecondaryPlayer(
+        identity="aabbcc000002",
+        evdev_path="/dev/input/event99",
+        reader=SimpleNamespace(grab_state="held"),  # type: ignore[arg-type]
+        player_index=2,
+        vpad=_VpadDoStateFull(2),
+    )
+    daemon._coop_manager = mgr  # type: ignore[assignment]
+    h = _HandlersDoStateFull(daemon)
+    with contando() as conta:
+        for _ in range(20):
+            cheio = await h._handle_daemon_state_full({})
+            relogio.agora += 3.0
+    assert _varreduras(conta, mesa_do_vpad) == 2
+    blocos = {b["player"]: b for b in cheio["rumble_ff"]["per_vpad"]}
+    assert blocos[1]["evdev"] == mesa_do_vpad.gamepad(1)
+    assert blocos[2]["evdev"] == mesa_do_vpad.gamepad(2)
