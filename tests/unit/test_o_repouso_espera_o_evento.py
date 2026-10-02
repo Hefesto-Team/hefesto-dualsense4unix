@@ -1653,6 +1653,35 @@ class TestONoDoVpadPelaGeracao:
         relogio.agora += 3.0
         assert h._no_do_vpad_cached(player_mac(1), _nome_do_vpad(1))["evdev"] is not None
 
+    def test_o_no_que_nasce_durante_a_varredura_chega_na_pergunta_seguinte(
+        self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A ficha se anota ANTES da varredura (`DonoDoEvento.ficha`).
+
+        O hidraw do P5 nasce enquanto a primeira pergunta ainda varre (depois
+        de ela ter lido a pasta `hidraw/`). Com a ficha de antes, o evento a
+        muda, e a pergunta seguinte varre de novo e acha o nó.
+        MORDIDA: anote a ficha DEPOIS do `resolver_no_do_vpad`, e o P5 fica com
+        `hidraw: None` até o próximo nó nascer.
+        """
+        h = _SoOCache()
+        dir_hid = mesa_do_vpad.vpad(5, hidraw=None)
+        real = no_mod.resolver_no_do_vpad
+
+        def varre_e_o_no_nasce(**kw: Any) -> dict[str, Any]:
+            bloco = real(**kw)
+            mesa_do_vpad.hidraw(dir_hid, "hidraw5")
+            return bloco
+
+        monkeypatch.setattr(ipc_mod, "resolver_no_do_vpad", varre_e_o_no_nasce)
+        sem = h._no_do_vpad_cached(player_mac(5), _nome_do_vpad(5))
+        assert sem["evdev"] is not None and sem["hidraw"] is None
+        monkeypatch.setattr(ipc_mod, "resolver_no_do_vpad", real)
+        relogio.agora += 3.0
+        com = h._no_do_vpad_cached(player_mac(5), _nome_do_vpad(5))
+        assert com["hidraw"] == str(mesa_do_vpad.nos / "hidraw5")
+
     def test_desarmado_o_ttl_de_sempre(
         self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
     ) -> None:
