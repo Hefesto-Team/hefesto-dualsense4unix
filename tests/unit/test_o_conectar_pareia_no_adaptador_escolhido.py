@@ -138,14 +138,31 @@ class Bancada:
         return GESTOS[(PAGINA, nome)](self.ctx(), clique, self.ponte)
 
     def esperar_a_central(self, teto: float = 15.0) -> None:
-        """O «Conectar» segue num fio da central; a régua espera ele acabar."""
+        """O «Conectar» segue num fio da central; a régua espera ele acabar.
+
+        O FIO, e não só o movimento (02/10/2026): o movimento sai «acabado» de
+        dentro da janela, e a janela fecha (o ``StopDiscovery``, o ``Pairable``
+        de volta) no ``finally`` do mesmo fio, logo depois. A régua que
+        perguntava ao rádio assim que o movimento acabava chegava, sob carga,
+        antes do ``finally`` (medido no lote dos vizinhos: o ``StopDiscovery``
+        ainda não chamado). A faxina é o único fio que não acaba, e fica fora.
+        """
         fim = time.monotonic() + teto
         while time.monotonic() < fim:
             movimentos = self.central.movimentos()
-            if movimentos and not any(m.em_curso for m in movimentos):
+            if movimentos and not any(m.em_curso for m in movimentos) and not self._fios_vivos():
                 return
             time.sleep(0.01)
-        raise AssertionError(f"a central não terminou: {self.central.movimentos()}")
+        raise AssertionError(f"a central não terminou: {self.central.movimentos()} "
+                             f"(fios vivos: {self._fios_vivos()})")
+
+    def _fios_vivos(self) -> list[str]:
+        from hefesto_dualsense4unix.integrations import central_do_radio as cr
+
+        with self.central._tranca:
+            fios = list(self.central._fios.items())
+        return [chave for chave, fio in fios
+                if chave != cr._FIO_DA_FAXINA and fio.is_alive()]
 
     def fechar(self) -> None:
         self.central.fechar(espera=5.0)
