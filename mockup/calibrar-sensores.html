@@ -219,12 +219,10 @@
 
 <div class="cx">
   <div class="topo">
-    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO, com a Controles como fallback de quem
-         abre o arquivo com duplo clique — que é como ela abre. É a mesma cura do
-         `mapa.py`, e pelo mesmo motivo: uma página avulsa não sabe quem a chamou. -->
-    <a class="voltar" href="02-controles.html"
-       onclick="if (document.referrer) { history.back(); return false }"
-       title="Volta para a aba anterior.">← Voltar</a>
+    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO, com a Controles como reserva de quem
+         abre o arquivo com duplo clique. O dono é o `caixa_da_janela.voltar`,
+         o mesmo do mapa do controle. -->
+    <a class="voltar" href="02-controles.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
     <h1><span class="p">Calibrar sensores de movimento</span></h1>
     <div class="sub">O giroscópio e o acelerômetro de todos os controles conectados, de uma vez.</div>
   </div>

@@ -36,3 +36,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## calibrar-sensores.html
 - **28/09/2026** — a linha da Mira Virtual diz também o que vale para a Inclinação e para o Cursor do touchpad (NO-MODO-XBOX-TUDO-FUNCIONA-01). Até publicar, a Calibrar dela fala só da Mira Virtual, e os deslizantes já valem para os três.
+- **01/10/2026** — o «← Voltar» pergunta à lista de volta do WebView, o mesmo dono do mapa do controle (`caixa_da_janela.voltar`). Na Calibrar não se vê diferença: só a Controles a abre (O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01).
