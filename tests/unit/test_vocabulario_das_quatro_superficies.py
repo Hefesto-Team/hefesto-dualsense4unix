@@ -7,11 +7,8 @@ from pathlib import Path
 _RAIZ = Path(__file__).resolve().parents[2]
 
 _JANELA_INICIO = _RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "home_actions.py"
-_JANELA_PERFIS = (
-    _RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "profiles_actions.py"
-)
-_JANELA_EMULACAO = (
-    _RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "emulation_actions.py"
+_TELA_JOGAR = (
+    _RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "pacotes" / "a01_jogar.py"
 )
 _APPLET = _RAIZ / "packaging" / "cosmic-applet" / "src" / "app.rs"
 _BANDEJA = _RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "tray.py"
@@ -69,29 +66,13 @@ def test_os_tres_modos_tem_a_mesma_frase_e_a_mesma_ordem_na_janela_e_no_applet()
     )
 
 
-def test_a_janela_nao_tem_duas_listas_de_modo_divergentes() -> None:
-    """A aba Perfis repete os mesmos três rótulos; repetir é poder divergir."""
-    inicio = _rotulos_de_pares(_bloco(_JANELA_INICIO, "_MODE_ITEMS = ["))
-    perfis = _rotulos_de_pares(
-        _bloco(_JANELA_PERFIS, "_MODE_KIND_ITEMS: list[tuple[str, str]] = [")
-    )
-
-    assert perfis[0] == "Não mexer no modo", (
-        f"a aba Perfis mudou o item de ausência de modo: {perfis!r}"
-    )
-    assert perfis[1:] == inicio, (
-        "as abas Início e Perfis dizem os três modos de jeitos diferentes.\n"
-        f"  Início: {inicio}\n"
-        f"  Perfis: {perfis[1:]}"
-    )
-
-
-def test_as_mascaras_tem_as_mesmas_frases_nas_tres_listas() -> None:
+def test_as_mascaras_tem_as_mesmas_frases_nas_duas_listas() -> None:
     """As frases (não a ordem — a ordem está no livro de divergências, D1).
 
-    Três listas dizem as mesmas máscaras: a aba Início, a aba Perfis e o
-    ``mode_block`` do applet. Renomear ``Xbox 360`` ou
-    ``DualSense (botões PlayStation)`` em uma só reprova aqui.
+    Duas listas dizem as mesmas máscaras: a aba Início e o ``mode_block`` do
+    applet (a lista da aba Perfis da janela GTK saiu com ela em 02/10/2026).
+    Renomear ``Xbox 360`` ou ``DualSense (botões PlayStation)`` em uma só reprova
+    aqui.
 
     NOTA DATADA — 07/09/2026: eram DUAS, e a régua as digitava. A máscara
     **Nintendo Pro** nasceu por ordem dela e teve de entrar nas três listas —
@@ -99,9 +80,6 @@ def test_as_mascaras_tem_as_mesmas_frases_nas_tres_listas() -> None:
     apareceu porque esta régua reprovou. É a razão de ela existir.
     """
     inicio = set(_rotulos_de_pares(_bloco(_JANELA_INICIO, "_FLAVOR_ITEMS = [")))
-    perfis = set(
-        _rotulos_de_pares(_bloco(_JANELA_PERFIS, "_MODE_FLAVOR_ITEMS: list[tuple[str, str]] = ["))
-    )
     applet = set(_rotulos_de_pares(_bloco(_APPLET, "let flavors = [")))
 
     assert inicio == {
@@ -109,10 +87,9 @@ def test_as_mascaras_tem_as_mesmas_frases_nas_tres_listas() -> None:
         "DualSense (botões PlayStation)",
         "Nintendo Pro (botões da Nintendo)",
     }, f"a aba Início mudou o nome de uma máscara: {sorted(inicio)}"
-    assert inicio == perfis == applet, (
+    assert inicio == applet, (
         "as máscaras têm nomes diferentes conforme a superfície.\n"
         f"  aba Início:  {sorted(inicio)}\n"
-        f"  aba Perfis:  {sorted(perfis)}\n"
         f"  applet:      {sorted(applet)}"
     )
 
@@ -122,11 +99,6 @@ _ORDEM_DAS_MASCARAS_MEDIDA_EM_01_08 = {
     "janela/Início (home_actions._FLAVOR_ITEMS)": [
         "Xbox 360",
         "DualSense (botões PlayStation)",
-        "Nintendo Pro (botões da Nintendo)",
-    ],
-    "janela/Perfis (profiles_actions._MODE_FLAVOR_ITEMS)": [
-        "DualSense (botões PlayStation)",
-        "Xbox 360",
         "Nintendo Pro (botões da Nintendo)",
     ],
     "applet (app.rs, let flavors)": [
@@ -143,15 +115,12 @@ def test_o_livro_da_ordem_das_mascaras_esta_exato() -> None:
         "janela/Início (home_actions._FLAVOR_ITEMS)": _rotulos_de_pares(
             _bloco(_JANELA_INICIO, "_FLAVOR_ITEMS = [")
         ),
-        "janela/Perfis (profiles_actions._MODE_FLAVOR_ITEMS)": _rotulos_de_pares(
-            _bloco(_JANELA_PERFIS, "_MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [")
-        ),
         "applet (app.rs, let flavors)": _rotulos_de_pares(_bloco(_APPLET, "let flavors = [")),
     }
 
     if len({tuple(ordem) for ordem in hoje.values()}) == 1:
         raise AssertionError(
-            "boa notícia: as três listas de máscara concordam na ordem — a D1 da "
+            "boa notícia: as duas listas de máscara concordam na ordem — a D1 da "
             "RADAR-01 foi curada.\n"
             "Apague o _ORDEM_DAS_MASCARAS_MEDIDA_EM_01_08 e este teste, e troque "
             "os dois por uma igualdade de ordem no "
@@ -222,10 +191,9 @@ def _frases_de_tela(caminho: Path) -> list[str]:
 
 def test_a_janela_continua_dona_da_frase_do_desligado() -> None:
     """Se a frase-dona mudar, a regra abaixo precisa de manutenção — não de fé."""
-    inicio = _JANELA_INICIO.read_text(encoding="utf-8")
-    emulacao = _JANELA_EMULACAO.read_text(encoding="utf-8")
+    jogar = _TELA_JOGAR.read_text(encoding="utf-8")
 
-    assert _FRASE_DONA_DO_DESLIGADO in inicio and _FRASE_DONA_DO_DESLIGADO in emulacao, (
+    assert _FRASE_DONA_DO_DESLIGADO in jogar, (
         f"a janela deixou de dizer {_FRASE_DONA_DO_DESLIGADO!r}. Se foi renomeação "
         "deliberada, a frase nova entra aqui E nas outras três superfícies no "
         "mesmo passo — que é a razão de existir deste arquivo."

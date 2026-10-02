@@ -141,14 +141,14 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
     total = len(_modulos_de_acoes())
 
-    assert total == 34, (
-        f"`app/actions/` tem {total} módulos, não 34. A contagem citada em "
+    assert total == 32, (
+        f"`app/actions/` tem {total} módulos, não 32. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
-    assert len(fora) == 25, (
+    assert len(fora) == 27, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 25: {', '.join(sorted(fora))}. Se o número CAIU, é "
+        f"tradução, não 27: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
@@ -192,10 +192,10 @@ def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
         )
     }
 
+    # 02/10/2026: `config/moldura.py` e as frases de `lightbar_actions.py` eram
+    # da janela GTK e saíram com ela (A-DIETA-DO-CODIGO-01); o piso é o que fica.
     piso = {
-        "config/moldura.py",
         "footer_actions.py",
-        "lightbar_actions.py",
         "status_actions.py",
     }
 

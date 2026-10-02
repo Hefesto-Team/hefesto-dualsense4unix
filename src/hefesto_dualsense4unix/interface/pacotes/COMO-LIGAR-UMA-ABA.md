@@ -22,52 +22,30 @@ abas temos praticamente tudo pronto."* Está mesmo. Três degraus, **nesta ordem
 **Nunca** monte payload à mão nem abra socket. O bridge já traz o payload, o
 timeout e a recusa do daemon traduzida em frase de tela.
 
-### O quarto degrau: `app/actions/` e `app/widgets/` — e a regra é por FUNÇÃO
+### O quarto degrau: `app/actions/` — e a regra é por FUNÇÃO
 
-**FATO ERRADO, SUBSTITUÍDO EM 02/09/2026.** Esta linha dizia *"**Não** tente
-reusar `app/actions/*.py`: são mixins GTK"*, e a proibição em bloco escondia a
-maior parte do legado. Medido em `app/actions/`:
+Medido em `app/actions/` em 02/10/2026, depois de a janela GTK sair:
 
 ```
-def de módulo:  355 (199 públicas)   ← importam sem janela nenhuma
-métodos (self): 571 (119 públicos)   ← precisam da Gtk.Window inteira
+def de módulo:  188 (130 públicas)   ← importam sem janela nenhuma
+métodos (self):  46 (10 públicos)    ← o que sobrou dos mixins da janela velha
 ```
 
-**63% das defs públicas são de módulo.** E **oito arquivos são PUROS** — têm
-função pública de módulo e nenhum método: `ambiente_na_tela`, `config/moldura`,
-`config/secao_janela`, `external_controllers`, `mode_transition`, `perfis_web`,
-`relancar`, `trigger_specs`.
+Dezesseis arquivos são PUROS — têm função pública de módulo e nenhum método:
+`ambiente_na_tela`, `atos_da_bandeja`, `config/secao_exame`,
+`external_controllers`, `footer_actions`, `home_actions`, `input_actions`,
+`launch_wrapper_dialog`, `mode_transition`, `mouse_actions`, `perfis_web`,
+`profile_writer`, `relancar`, `rumble_actions`, `trigger_specs`,
+`triggers_actions`.
 
-**A regra que vale, e ela decide caso a caso:**
-
-> **`def nome(args)` no topo do módulo → REUSA.** Importa sem janela, responde
-> *"qual é o valor?"*.
-> **`def nome(self, …)` dentro de classe → NÃO ATRAVESSA.** Precisa da
-> `Gtk.Window`, responde *"onde ponho na tela?"*.
-
-Os dois lados, no mesmo arquivo — `app/actions/triggers_actions.py`:
-
-```python
-def humanizar_erro_gatilho(motivo, spec=None):   # :53  REUSA (e nenhum pacote a chama)
-class TriggersActionsMixin(WidgetAccessMixin):   # :78
-    def _rebuild_params(self, …):                #      NÃO ATRAVESSA
-```
-
-Como se decide em três segundos, sem abrir o arquivo:
+**A regra:** `def nome(args)` no topo do módulo → **REUSA** (importa sem
+janela, responde *"qual é o valor?"*). Método de classe → leia antes: o que
+sobrou dos mixins não tem janela para servir.
 
 ```bash
 grep -c "^def "    src/hefesto_dualsense4unix/app/actions/ALVO.py   # reusam
-grep -c "    def " src/hefesto_dualsense4unix/app/actions/ALVO.py   # não
+grep -c "    def " src/hefesto_dualsense4unix/app/actions/ALVO.py   # leia antes
 ```
-
-`footer_actions.py` é o único onde a proibição antiga acertava: 1.837 linhas,
-**zero** função de módulo. `external_controllers.py` é o oposto: **25 funções
-públicas de módulo, zero método**.
-
-**O que cada aba deveria estar chamando e não chama está medido em
-`docs/process/sprints/arquivados/2026-09-02-ROTA-B1-o-inventario-do-motor.md`. Leia antes
-de escrever uma função** — o motor oferece 314 funções que atravessam para HTML,
-e a tela nova chama treze.
 
 ## O nome do método não diz o que ele faz
 

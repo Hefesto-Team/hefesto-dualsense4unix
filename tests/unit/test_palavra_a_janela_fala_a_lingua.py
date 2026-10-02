@@ -84,26 +84,6 @@ def test_texto_de_estado_nao_comeca_em_minuscula(arquivo: Path) -> None:
     )
 
 
-def test_os_estados_de_hoje_estao_escritos_como_frase() -> None:
-    """Trava, um a um, os textos que a sprint listou por nome."""
-    emulacao = [_sem_markup(t) for t in _textos_de_tela(EMULACAO_PY)]
-    mouse = [_sem_markup(t) for t in _textos_de_tela(MOUSE_PY)]
-
-    assert "Ligado" in emulacao
-    assert "Desligado" in emulacao
-    assert "Desligado (suprimido)" in emulacao
-    assert "O Hefesto está em pausa" in emulacao
-    assert "O Hefesto está desligado" in emulacao
-    assert any(t.startswith("Desligado — emulação normal") for t in emulacao)
-    assert any(t.startswith("Conexão Nativa (Sony)") for t in emulacao)
-    assert any(t.startswith("Ligado —") for t in emulacao)
-
-    assert "Pronto para usar como mouse" in mouse
-    assert any(t.startswith("O mouse virtual está sem permissão") for t in mouse)
-    assert any(t.startswith("O mouse virtual ainda não está pronto") for t in mouse)
-    assert any(t.startswith("Falta um componente do mouse virtual") for t in mouse)
-
-
 def _rotulos_de_gatilho() -> list[str]:
     from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 

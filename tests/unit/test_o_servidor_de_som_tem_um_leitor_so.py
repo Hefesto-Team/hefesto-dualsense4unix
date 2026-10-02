@@ -486,7 +486,6 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
 
 PORTAS: dict[tuple[str, str], str] = {
     ("app/audio_saida.py", "rodar"): "audio_saida.rodar_leitura",
-    ("app/audio_saida.py", "rodar_leitura"): "audio_saida.rodar_leitura",
     ("app/audio_saida.py", "ler"): "audio_saida.rodar_leitura",
     ("app/audio_saida.py", "self._runner"): "audio_saida.rodar_leitura",
     ("app/mic_monitor.py", "self._runner"): "mic_monitor._rodar",
