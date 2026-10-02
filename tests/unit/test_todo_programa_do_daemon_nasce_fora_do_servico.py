@@ -117,6 +117,13 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "o `Popen` de reserva: quem chama já é da pessoa, ou não há systemd de "
         "usuário, ou ele recusou",
     ),
+    # O SCRIPT DO GESTO — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01, 01/10/2026:
+    # o «Escolher um script…» de um gesto roda pelo `systemd-run --wait`, e o
+    # `Popen` daqui é a reserva quando não há gerenciador (ou ele recusou).
+    "integrations/fora_do_servico.py::rodar_e_esperar": (
+        "o dono", 1,
+        "o `Popen` de reserva do script de um gesto: espera o fim, com teto",
+    ),
     "integrations/steam_launcher.py::_default_popen": (
         "reserva do dono", 1,
         "o `popen=` que `_spawn_steam` entrega a `fora_do_servico.abrir`",
@@ -134,6 +141,9 @@ VEREDITOS_VALIDOS = frozenset({"ajudante", "o dono", "reserva do dono", "outro p
 PROGRAMAS_DELA: dict[str, str] = {
     "daemon/subsystems/keyboard.py::_OSKController._abrir": "o teclado na tela (L3)",
     "daemon/subsystems/hotkey.py::_a_acao_da_maquina": "o programa do PS personalizado",
+    "daemon/subsystems/hotkey.py::_abrir_o_ato_da_bandeja": (
+        "os três atos da bandeja que um gesto alcança (OS-GESTOS, 01/10/2026)"
+    ),
     "integrations/steam_launcher.py::_spawn_steam": "a Steam do PS",
     "integrations/steam_launch_options.py::start_steam_game": "o jogo pela Steam",
     "integrations/steam_launch_options.py::reopen_steam": "a Steam reaberta",
