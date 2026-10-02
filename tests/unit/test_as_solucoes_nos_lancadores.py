@@ -191,6 +191,33 @@ def test_o_excluido_nao_conta_como_falta(tmp_path: Path) -> None:
                                      raiz_sistema=tmp_path / "sistema") == ()
 
 
+def test_onde_falta_mede_a_caixa_do_emulador(tmp_path: Path) -> None:
+    """A caixa do Flatpak sem uma variável da ponte acusa falta; a carona a
+    cura, e a caixa excluída não conta. ARRANQUE o ramo das caixas do
+    `onde_falta_o_ambiente` e este teste reprova: o cartão do RetroArch nunca
+    diria «Sem o ambiente do Hefesto»."""
+    ativo = Path.home() / ".local/share/flatpak/app/org.libretro.RetroArch/current/active"
+    ativo.mkdir(parents=True)
+    (ativo / "metadata").write_text("[Application]\nname=org.libretro.RetroArch\n")
+    override = Path.home() / ".local/share/flatpak/overrides/org.libretro.RetroArch"
+    override.parent.mkdir(parents=True)
+    override.write_text("[Environment]\nSDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6\n")
+    amb = _ponte(tmp_path, (_IGNORE, _ACELEROMETRO))
+    caixa = ("org.libretro.RetroArch",)
+
+    def falta() -> tuple[str, ...]:
+        return cpe.onde_falta_o_ambiente("retroarch", caixa, pasta_do_ambiente=amb,
+                                         raiz_sistema=tmp_path / "sistema")
+
+    assert falta() == caixa
+    _carona(tmp_path, amb)
+    assert falta() == ()
+    override.write_text("[Environment]\n")
+    lx.adicionar("emulador:retroarch", lancador="retroarch", nome="RetroArch — todos os jogos",
+                 janelas=("org.libretro.RetroArch", "retroarch", "com.libretro.RetroArch"))
+    assert falta() == (), "a caixa excluída contou como falta"
+
+
 def test_sem_a_ponte_nao_ha_o_que_cobrar(tmp_path: Path) -> None:
     """Sem o ambiente publicado (serviço nunca ligado) não há com o que
     comparar: nenhum cartão acusa falta — nem com a global do Heroic ilegível,
